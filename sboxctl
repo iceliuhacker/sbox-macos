@@ -13,7 +13,7 @@ TYPE=$2
 
 
 
-chk_root()
+chk_sudo()
 {
 	id -u | grep -q '^0$' && (echo "Don't run for root!!!"; exit 0) && exit 1
 	sudo -p "Please input sudo password:" -l > /dev/null
@@ -21,55 +21,16 @@ chk_root()
 	sudo sysctl net.inet6.ip6.forwarding=1 > /dev/null
 }
 
-config()
-{
-	echo '     0  new'
-	ls conf/*.xray 2>/dev/null | sed -e 's/^conf\///' -e 's/.xray$//' | cat -n
-cat << EOF
-Please select configuration file,Multiple separated by spaces,99 is all.
-Example_1:1      -> select 1.
-Example_2:1,3,5  -> select 1,3,5.
-Example_3:99     -> select all.
-EOF
-	echo "Please input:[0]" | awk '{printf $0}'
-	read TPL_NUMBER
-	if [ "$TPL_NUMBER" = "" ]; then
-		TPL_NUMBER=0
-	fi
-	if [ "$TPL_NUMBER" = "0" ]; then
-		create_conf
-		exit 0
-	fi
-	if [ "$TPL_NUMBER" = "99" ]; then
-		ls conf/*.xray 2>/dev/null | sed -e 's/^conf\///' -e 's/.xray$//' | sed -n 1,99p > conf/run.conf
-	else
-		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"p;"}'`
-		ls conf/*.xray 2>/dev/null | sed -e 's/^conf\///' -e 's/.xray$//' | sed -n "${TPL_NUMBER}" > conf/run.conf
-	fi
-	DEST_LIST=`cat conf/run.conf`
-	if [ "$DEST_LIST" = "" ]; then
-		create_conf
-	fi
-	PID=`ps axwww | grep 'xray run -confdir run' | grep -v grep | awk '{printf $1}'`
-	if [ "$PID" != "" ]; then
-		chk_root
-		sudo pfctl -sr 2>/dev/null | grep -q '^pass out quick route-to ' && TYPE=tun || TYPE=proxy
-		restart
-	else
-		create_json
-	fi
-}
-
 create_conf()
 {
 	echo "Please input name:" | awk '{printf $0}'
 	read CONF_FILE
-	if [ -f conf/$CONF_FILE.xray ]; then
+	if [ -f db/$CONF_FILE.sbox ]; then
 		echo "Already exist!!!"
 		exit 1
 	fi
-	touch conf/$CONF_FILE.xray || (echo "Error name!!!"; exit 1) || exit 1
-	rm -f conf/$CONF_FILE.xray
+	touch db/$CONF_FILE.sbox || (echo "Error name!!!"; exit 1) || exit 1
+	rm -f db/$CONF_FILE.sbox
 	#echo "protocol:[vless]" | awk '{printf $0}'
 	#read protocol
 	echo "address:" | awk '{printf $0}'
@@ -108,7 +69,7 @@ create_conf()
 		read shortId
 	fi
 	if [ "$address" != "" ] && [ "$port" != "" ] && [ "$id" != "" ]; then
-		cat << EOF > conf/$CONF_FILE.xray
+		cat << EOF > db/$CONF_FILE.sbox
 protocol=$protocol
 address=$address
 port=$port
@@ -121,6 +82,45 @@ publicKey=$publicKey
 shortId=$shortId
 EOF
 		echo "$CONF_FILE" > conf/run.conf
+		#create_json
+	fi
+}
+
+config()
+{
+	echo '     0  new'
+	ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | cat -n
+cat << EOF
+Please select configuration file,Multiple separated by spaces,99 is all.
+Example_1:1      -> select 1.
+Example_2:1,3,5  -> select 1,3,5.
+Example_3:99     -> select all.
+EOF
+	echo "Please input:[0]" | awk '{printf $0}'
+	read TPL_NUMBER
+	if [ "$TPL_NUMBER" = "" ]; then
+		TPL_NUMBER=0
+	fi
+	if [ "$TPL_NUMBER" = "0" ]; then
+		create_conf
+		exit 0
+	fi
+	if [ "$TPL_NUMBER" = "99" ]; then
+		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n 1,99p > conf/run.conf
+	else
+		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"p;"}'`
+		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}" > conf/run.conf
+	fi
+	DEST_LIST=`cat conf/run.conf`
+	if [ "$DEST_LIST" = "" ]; then
+		create_conf
+	fi
+	PID=`ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{printf $1}'`
+	if [ "$PID" != "" ]; then
+		chk_sudo
+		sudo pfctl -sr 2>/dev/null | grep -q '^pass out quick route-to ' && TYPE=tun || TYPE=proxy
+		restart
+	else
 		create_json
 	fi
 }
@@ -414,7 +414,7 @@ stop()
 
 restart()
 {
-	chk_root
+	chk_sudo
 	stop
 	disable_tun
 	disable_proxy
@@ -598,7 +598,7 @@ fi
 case $ACT in
 	start)
 		check_run
-		chk_root
+		chk_sudo
 		create_json
 		enable_$TYPE
 		start
@@ -607,7 +607,7 @@ case $ACT in
 		export TYPE && ./xray_daemons &
 	;;
 	stop)
-		chk_root
+		chk_sudo
 		./xray_daemons stop
 		stop
 		disable_tun

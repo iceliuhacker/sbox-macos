@@ -1,0 +1,633 @@
+#!/bin/bash
+
+
+_fly_net='1.0.0.0/8,2.0.0.0/7,4.0.0.0/6,8.0.0.0/5,16.0.0.0/4,32.0.0.0/3,64.0.0.0/2,128.0.0.0/1,198.18.0.0/15'
+_skip_net='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,240.0.0.0/4,0.0.0.0/8,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24'
+_skip_net6='::1/128,fc00::/7,fe80::/10'
+CHK_LIST='www.google.com twitter.com www.facebook.com www.baidu.com www.sohu.com'
+_tun=utun100
+_tun_ip=100.100.100.100
+_tun_ip6='fd00::100:100:100:100'
+ACT=$1
+TYPE=$2
+
+
+
+chk_root()
+{
+	id -u | grep -q '^0$' && (echo "Don't run for root!!!"; exit 0) && exit 1
+	sudo -p "Please input sudo password:" -l > /dev/null
+	sudo sysctl net.inet.ip.forwarding=1 > /dev/null
+	sudo sysctl net.inet6.ip6.forwarding=1 > /dev/null
+}
+
+config()
+{
+	echo '     0  new'
+	ls conf/*.xray 2>/dev/null | sed -e 's/^conf\///' -e 's/.xray$//' | cat -n
+cat << EOF
+Please select configuration file,Multiple separated by spaces,99 is all.
+Example_1:1      -> select 1.
+Example_2:1,3,5  -> select 1,3,5.
+Example_3:99     -> select all.
+EOF
+	echo "Please input:[0]" | awk '{printf $0}'
+	read TPL_NUMBER
+	if [ "$TPL_NUMBER" = "" ]; then
+		TPL_NUMBER=0
+	fi
+	if [ "$TPL_NUMBER" = "0" ]; then
+		create_conf
+		exit 0
+	fi
+	if [ "$TPL_NUMBER" = "99" ]; then
+		ls conf/*.xray 2>/dev/null | sed -e 's/^conf\///' -e 's/.xray$//' | sed -n 1,99p > conf/run.conf
+	else
+		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"p;"}'`
+		ls conf/*.xray 2>/dev/null | sed -e 's/^conf\///' -e 's/.xray$//' | sed -n "${TPL_NUMBER}" > conf/run.conf
+	fi
+	DEST_LIST=`cat conf/run.conf`
+	if [ "$DEST_LIST" = "" ]; then
+		create_conf
+	fi
+	PID=`ps axwww | grep 'xray run -confdir run' | grep -v grep | awk '{printf $1}'`
+	if [ "$PID" != "" ]; then
+		chk_root
+		sudo pfctl -sr 2>/dev/null | grep -q '^pass out quick route-to ' && TYPE=tun || TYPE=proxy
+		restart
+	else
+		create_json
+	fi
+}
+
+create_conf()
+{
+	echo "Please input name:" | awk '{printf $0}'
+	read CONF_FILE
+	if [ -f conf/$CONF_FILE.xray ]; then
+		echo "Already exist!!!"
+		exit 1
+	fi
+	touch conf/$CONF_FILE.xray || (echo "Error name!!!"; exit 1) || exit 1
+	rm -f conf/$CONF_FILE.xray
+	#echo "protocol:[vless]" | awk '{printf $0}'
+	#read protocol
+	echo "address:" | awk '{printf $0}'
+	read address
+	echo "port:" | awk '{printf $0}'
+	read port
+	#echo "flow:[xtls-rprx-vision]" | awk '{printf $0}'
+	#read flow
+	echo "id:" | awk '{printf $0}'
+	read id
+	echo "serverName:" | awk '{printf $0}'
+	read serverName
+	echo "Skip certificate validation:false,true[false]" | awk '{printf $0}'
+	read allowInsecure
+	if [ "$protocol" = "" ]; then
+		protocol=vless
+	fi
+	if [ "$flow" = "" ]; then
+		flow=xtls-rprx-vision
+	fi
+	if [ "$serverName" = "" ]; then
+		serverName=$address
+	fi
+	if [ "$allowInsecure" != "true" ]; then
+		allowInsecure=false
+	fi
+	echo "security:tls,reality[tls]" | awk '{printf $0}'
+	read security
+	if [ "$security" = "" ]; then
+		security=tls
+	fi
+	if [ "$security" = "reality" ]; then
+		echo "publicKey:" | awk '{printf $0}'
+		read publicKey
+		echo "shortId:" | awk '{printf $0}'
+		read shortId
+	fi
+	if [ "$address" != "" ] && [ "$port" != "" ] && [ "$id" != "" ]; then
+		cat << EOF > conf/$CONF_FILE.xray
+protocol=$protocol
+address=$address
+port=$port
+flow=$flow
+id=$id
+security=$security
+serverName=$serverName
+allowInsecure=$allowInsecure
+publicKey=$publicKey
+shortId=$shortId
+EOF
+		echo "$CONF_FILE" > conf/run.conf
+		create_json
+	fi
+}
+
+create_json()
+{
+	./xray version
+	mkdir -p run
+	#创建主配置
+	rm -f run/*.json
+	RUN_COUNT=`cat conf/run.conf | wc -l | awk '{printf $1}'`
+	DEST_RULE_LIST=''
+	RUN_CONF=`cat conf/run.conf`
+	for XCONF in $RUN_CONF; do
+		source conf/$XCONF.xray || RUN_COUNT=`expr $RUN_COUNT - 1`
+		if [ "$RUN_COUNT" -lt "1" ]; then
+			echo "Not alive node!!!"
+			exit
+		fi
+		JCON=0
+		if [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ -f tpl/$protocol.$flow.json.tpl ]; then
+			TPL=tpl/$protocol.$flow.json.tpl
+			JCON=1
+		fi
+		if [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$security" = "reality" ] && [ "$publicKey" != "" ] && [ -f tpl/$protocol.$flow.$security.json.tpl ]; then
+			TPL=tpl/$protocol.$flow.$security.json.tpl
+			JCON=1
+		fi
+		if [ "$JCON" = "0" ]; then
+			echo "Error xray date \"$XCONF\"!!"
+			continue
+		fi
+		DEST_RULE_LIST=$DEST_RULE_LIST`cat conf/$XCONF.xray | grep 'address=' | awk -F'=' '{print "pass out quick inet proto tcp from any to "$2","}'`
+		
+		if [ "$RUN_COUNT" -gt "1" ]; then
+			TAG="-${XCONF}"
+			probeInterval=10s
+		else
+			TAG=''
+			probeInterval=9999h
+		fi
+		cat $TPL | sed -e "s/_TAG_/${TAG}/g" \
+						-e "s/_protocol_/${protocol}/g" \
+						-e "s/_address_/${address}/g" \
+						-e "s/_port_/${port}/g" \
+						-e "s/_flow_/${flow}/g" \
+						-e "s/_id_/${id}/g" \
+						-e "s/_serverName_/${serverName}/g" \
+						-e "s/_allowInsecure_/${allowInsecure}/g" \
+						-e "s/_security_/${security}/g" \
+						-e "s/_publicKey_/${publicKey}/g" \
+						-e "s/_shortId_/${shortId}/g" \
+						> run/$XCONF.json
+	done
+
+	cat tpl/main.json.tpl | sed -e "s/_TUN_IP6_/${_tun_ip6}/g" -e "s/_probeInterval_/${probeInterval}/g" > run/main.json
+
+	#创建DNS规则
+	cat << EOF >> run/dns.json
+{
+    "dns": {
+        "tag": "internal_dns",
+        //"clientIp": "0.0.0.0",
+        "queryStrategy": "UseIPv4",        //UseIPv4 只查询 A 记录；UseIPv6 只查询 AAAA 记录。默认值为 UseIP，即查询 A 和 AAAA 记录。
+        "disableCache": false,
+        "disableFallback": false,
+        "disableFallbackIfMatch": false,
+        "servers": [
+EOF
+	DNS_INFO=`cat conf/dns.conf | awk -F'#' '{print $1}'`
+	for DNS_SET in $DNS_INFO; do
+		HOST_LIST=`echo $DNS_SET | awk -F'=' '{printf $1}' | sed 's/,/","/g'`
+		HOST_DNS=`echo $DNS_SET | awk -F'=' '{printf $2}' | sed 's/,/ /g'`
+		EXT_NET=`echo $DNS_SET | awk -F'=' '{printf $3}'`
+		if [ "$EXT_NET" != "" ]; then
+			EXT_NET=`echo $EXT_NET | sed -e 's/^ext:/"expectIPs": ["/' -e 's/,/","/g' -e 's/$/"],/'`
+		else
+			EXT_NET=
+		fi
+		for DNS in $HOST_DNS; do
+			echo "Check DNS $DNS..." | awk '{printf $0}'
+			sudo host -W 1 -t soa . $DNS > /dev/null 2>&1 && echo "OK." || (echo "Skip!"; exit 1) ||continue
+			if [ "$HOST_LIST" = "any" ]; then
+				cat << EOF >> run/dns.json
+            "$DNS",
+EOF
+			else
+				cat << EOF >> run/dns.json
+            {
+                "address": "$DNS",
+                $EXT_NET
+                "domains": ["$HOST_LIST"]
+            },
+EOF
+			fi
+		done
+	done
+	cat << EOF >> run/dns.json
+            "localhost"
+        ]
+    }
+}
+EOF
+
+	#创建路由规则
+	cat << EOF >> run/route.json
+{
+    "routing": {
+        //AsIs:仅用 [domain] 来匹配(不使用内置DNS)
+        //IPIfNonMatch:如果其他所有规则都匹配不上，那就转化成 IP 去匹配 IP 规则
+        //IPOnDemand:当匹配时碰到任何基于 IP 的规则，将域名立即解析为 IP 进行匹配
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "protocol": ["bittorrent"],               
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "inboundTag": ["dns-in","dns6-in"],
+                "outboundTag": "dns-out"
+            },
+EOF
+	RT_INFO=`cat conf/route.conf | awk -F'#' '{print $1}'`
+	for RT in $RT_INFO;do
+		HOST_TYPE=`echo $RT | awk -F'=' '{printf $1}'`
+		HOST_LIST=`echo $RT | awk -F'=' '{printf $2}' | sed 's/,/","/g'`
+		HOST_ACT=`echo $RT | awk -F'=' '{printf $3}'`
+		if [ "$TAG" != "" ]; then
+			OUT_TAG=balancerTag
+		else
+			OUT_TAG=outboundTag
+		fi
+		if [ "$HOST_ACT" = "direct" ]; then
+			OUT_TAG=outboundTag
+			OUT_DST=direct
+		else
+			OUT_DST=UP_LINK
+		fi
+		cat << EOF >> run/route.json
+            {
+                "type": "field",
+                "$HOST_TYPE": ["$HOST_LIST"],
+                "$OUT_TAG": "$OUT_DST"
+            },
+EOF
+	done
+	cat << EOF >> run/route.json
+            {
+                "type": "field",
+                "ip": ["0.0.0.0/0"],
+                "$OUT_TAG": "UP_LINK"
+            }
+        ],
+        "balancers": [
+		    {
+                "tag": "UP_LINK",
+                "strategy": {
+                    "type": "leastPing"
+                },
+                "selector": [ "UP_LINK" ]	//匹配tag标签前缀
+            }
+        ]
+    }
+}
+EOF
+	cat << EOF >> run/000_default_out.json
+{
+    "outbounds": [
+        {
+            "tag": "direct",
+            "protocol": "freedom"
+        },
+        // 建立一个dns解析服务，优先根据internal_dns的规则反馈解析，internal_dns都无响应则根据dns-in指定的IP解析
+        {
+            "tag": "dns-out",
+            "protocol": "dns"
+        }
+    ]
+}
+EOF
+}
+
+enable_tun()
+{
+	STARTED=0
+	sudo ./tun2socks -device tun://$_tun -proxy "socks5://127.0.0.1:65080" > log/tun2socks.log 2>&1 &
+	for x in `seq 1 20`; do
+		sleep 0.2
+		ifconfig $_tun >/dev/null 2>&1 && STARTED=1 && break
+	done
+	if [ "$STARTED" != "1" ]; then
+		echo "Start tun2socks Fail!!!"
+		cat log/tun2socks.log
+		exit 1
+	fi
+	sudo ifconfig $_tun inet $_tun_ip/32 $_tun_ip up
+	sudo ifconfig $_tun inet6 $_tun_ip6/128 $_tun_ip6 up
+	ME=`whoami`
+	if [ -f conf/my_ipv4.txt ]; then
+		_skip_net="$_skip_net"`cat conf/my_ipv4.txt`
+	fi
+	if [ -f conf/my_ipv6.txt ]; then
+		_skip_net6="$_skip_net6"`cat conf/my_ipv6.txt`
+	fi
+	if [ -f conf/cn_ipv4.txt ]; then
+		_skip_net="$_skip_net"`cat conf/cn_ipv4.txt`
+	fi
+	if [ -f conf/cn_ipv6.txt ]; then
+		_skip_net6="$_skip_net6"`cat conf/cn_ipv6.txt`
+	fi
+	cat << EOF > conf/pf.xray.rules
+table <skip_net> { $_skip_net }
+table <skip_net6> { $_skip_net6 }
+#table <fly_net> { $_fly_net }
+fwd_ports = "{1:52,54:65535}"
+rdr pass on lo0 inet proto { tcp,udp } from any to any port 53 -> 127.0.0.1 port 65053
+rdr pass on lo0 inet proto { tcp,udp } from any to ! <skip_net> -> 127.0.0.1 port 65041
+
+rdr pass on lo0 inet6 proto { tcp,udp } from any to any port 53 -> ::1 port 65053
+#rdr pass on $_tun inet6 proto { tcp,udp } from any to ! <skip_net6> -> $_tun_ip6 port 65041
+
+`echo "${DEST_RULE_LIST}" | tr ',' '\n' | awk -F':' '{if (NF>1) {sub(/ inet /," inet6 ");print $0;} else print $1}'`
+
+pass out quick route-to (lo0 127.0.0.1) inet proto {tcp,udp} from any to any port 53 user > 0
+pass out quick route-to (lo0 127.0.0.1) inet proto tcp from any to ! <skip_net> user > 0
+pass out quick route-to ($_tun $_tun_ip) inet proto udp from any to ! <skip_net> user > 0
+
+pass out quick route-to (lo0 ::1) inet6 proto {tcp,udp} from any to any port 53 user > 0
+#pass out quick route-to ($_tun $_tun_ip6) inet6 proto {tcp,udp} from any to ! <skip_net6> user > 0
+
+#pass out quick all
+EOF
+	sudo pfctl -e > /dev/null 2>&1
+	sudo pfctl -f conf/pf.xray.rules > /dev/null 2>&1 || (echo "PF firewall load Fail!!!"; sudo pfctl -f conf/pf.xray.rules; disable_tun; exit 1) || exit 1
+	sudo killall -HUP mDNSResponder 2>&1
+	enable_proxy
+}
+
+disable_tun()
+{
+	sudo pfctl -dF all > /dev/null 2>&1
+	sudo killall -HUP mDNSResponder 2>&1
+	sudo kill -9 `ps ax | grep "tun2socks -device tun://$_tun " | egrep -v 'grep|sudo' | awk '{print $1}'` > /dev/null 2>&1
+	disable_proxy
+}
+
+enable_proxy()
+{
+	networksetup -listnetworkserviceorder | grep '^([0-99]) ' | sed 's/^([0-99]) //' | \
+		while read ETH; do
+			networksetup -setsocksfirewallproxy "$ETH" localhost 65080
+			networksetup -setsocksfirewallproxystate "$ETH" on
+			#networksetup -setproxybypassdomains "$ETH" youtube.com whatismyipaddress.com    #跳过代理得域名
+			#networksetup -setv6off "$ETH"
+		done
+}
+
+disable_proxy()
+{
+	networksetup -listnetworkserviceorder | grep '^([0-99]) ' | sed 's/^([0-99]) //' | \
+		while read ETH; do
+			networksetup -setsocksfirewallproxy "$ETH" "" ""
+			networksetup -setsocksfirewallproxystate "$ETH" off
+			#networksetup -setv6automatic "$ETH"
+		done
+}
+
+check_run()
+{
+	PID=`ps axwww | grep 'xray run -confdir run' | grep -v grep | awk '{printf $1}'`
+	if [ "$PID" != "" ]; then
+		echo "Already running..."
+		exit 0
+	fi
+}
+
+start()
+{
+	if [ ! -f run/main.json ] || [ ! -f run/dns.json ] || [ ! -f run/route.json ] || [ ! -f run/000_default_out.json ]; then
+		config
+	fi
+	sudo ./xray run -confdir run > log/xray.log 2>&1 &
+}
+
+stop()
+{
+	sudo kill -9 `ps axwww | grep 'xray run -confdir run' | egrep -v 'grep|sudo' | awk '{print $1}'` > /dev/null 2>&1
+}
+
+restart()
+{
+	chk_root
+	stop
+	disable_tun
+	disable_proxy
+	create_json
+	enable_$TYPE
+	start
+	check_connect
+}
+
+check_connect()
+{
+	cat conf/run.conf | awk '{print "Connect "$0"."}'
+	STARTED=0
+	for x in `seq 20`; do
+		sleep 0.2
+		cat log/xray.log | grep -v 'Logger started' | grep -q ' started$' && STARTED=1 && break
+	done
+	if [ "$STARTED" != "1" ]; then
+		stop
+		disable_tun
+		disable_proxy
+		echo "Start Fail!!!"
+		cat log/xray.log
+		exit 1
+	fi
+	if [ "$TYPE" = "proxy" ]; then
+		SOCKS5='--socks5 127.0.0.1:65080'
+	else
+		SOCKS5=''
+	fi
+	for A in $CHK_LIST; do
+		curl -sSLI $SOCKS5 --connect-timeout 5 -w "%{http_code}" https://$A/ -o /dev/null | grep -q '^20' && echo "Check $A...OK." || echo "Check $A...Fail!"
+	done
+	curl -sSL $SOCKS5 --connect-timeout 5 https://cip.cc/ | awk '{if ($1=="IP") print "Internal IP: "$3" from:https://cip.cc/"}'
+	curl -sSL $SOCKS5 --connect-timeout 5 https://api.ipify.org | awk '{print "GFW outside: "$1" from:https://api.ipify.org/"}'
+}
+
+subscribe()
+{
+	SUB_URL=$TYPE
+	if [ "$SUB_URL" = "tun" ] || [ "$SUB_URL" = "proxy" ]; then
+		echo "Error URL!!!"
+		exit 1
+	fi
+	echo "Skip certificate validation:false,true[false]" | awk '{printf $0}'
+	read allowInsecure
+	if [ "$allowInsecure" != "true" ]; then
+		allowInsecure=false
+	fi
+	rm -f conf/.subscribe
+	echo "Get $SUB_URL data..." | awk '{printf $0}'
+	curl -sSL --connect-timeout 5 $SUB_URL -o conf/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
+	cat conf/.subscribe | grep '^vless://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
+	NODE_LIST=`cat conf/.subscribe | grep '^vless://' | awk -F'#' '{if (NF==2) print $NF}'`
+	if [ "$NODE_LIST" = "" ]; then
+		echo "Error data!!!"
+		exit 1
+	fi
+	echo "Convert subscribe to xray:"
+	for NODE in $NODE_LIST; do
+		if [ -f conf/$NODE.xray ]; then
+			SUB_ACT="Update"
+		else
+			SUB_ACT="Create"
+		fi
+		echo -e "protocol=vless\nallowInsecure=$allowInsecure" > conf/$NODE.xray || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
+		echo "$SUB_ACT $NODE.xray..." | awk '{printf $0}'
+		NODE_INFO=`cat conf/.subscribe | grep "#${NODE}$" | sed -e 's@vless://@@' -e "s/#${NODE}$//"`
+		echo $NODE_INFO | tr -s '@?&' '\n' | awk '{
+			if (NR==1) print "id="$0;
+			if (NR==2) {
+				split($0,ipv6,"]:");
+				split($0,ipv4,":");
+				if (ipv6[2]=="") {
+					print "address="ipv4[1];
+					print "port="ipv4[2];
+				} else {
+					print "address="ipv6[1];
+					print "port="ipv6[2];
+				}
+			}
+			if (NR>2) print $0
+		}' | sed -e 's/^sni=/serverName=/' \
+				-e 's/^pbk=/publicKey=/' \
+				-e 's/^sid=/shortId=/' \
+				-e 's/^address=\[/address=/' \
+				>> conf/$NODE.xray && echo "done." || echo "Fail!!!"
+	done
+}
+
+update()
+{
+	ifconfig >/dev/null 2>&1 | grep -q "inet $_tun_ip netmask" && SOCKS5='' || SOCKS5='--socks5 127.0.0.1:65080'
+	PID=`ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{printf $1}'`
+	if [ -z $PID ]; then
+		SOCKS5=''
+	fi
+	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
+	NEW_VERSION=`curl -sSL https://api.github.com/repos/SagerNet/sing-box/tags | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
+	if [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
+		echo "Have a new version:$NEW_VERSION,do you upgrade?[N/y]" | awk '{printf $0}'
+		read CON
+		if [ "$CON" = "y" ]; then 
+			CPU=`uname -m`
+			if [ "$CPU" = "x86_64" ]; then
+				URL=https://github.com/SagerNet/sing-box/releases/download/v${NEW_VERSION}/sing-box-${NEW_VERSION}-darwin-amd64.tar.gz
+			else
+				URL=https://github.com/SagerNet/sing-box/releases/download/v${NEW_VERSION}/sing-box-${NEW_VERSION}-darwin-arm64.tar.gz
+			fi
+			echo "Download $URL..." | awk '{printf $0}'
+			curl -skSL $SOCKS5 --connect-timeout 5 -w "%{http_code}" $URL -o sing-box.tar.gz | grep -q '^20' && echo "done." || (rm sing-box.tar.gz;echo "Fail!!!")
+			if [ -f sing-box.tar.gz ]; then
+				echo "Upgrade sing-box..." | awk '{printf $0}'
+				tar xzf sing-box.tar.gz
+				find . -name sing-box -exec mv {} ./ \;
+				chmod 755 sing-box
+				rm -rf sing-box.tar.gz sing-box-${NEW_VERSION}-*
+				echo "done."
+			fi
+		fi
+	fi
+	
+	#更新PF所需地址库
+	URL_LIST='https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/cncidr.txt https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt'
+	for URL in $URL_LIST; do
+		echo "Download $URL..." | awk '{printf $0}'
+		curl -skSL $SOCKS5 --connect-timeout 5 -w "%{http_code}" $URL -o tpl/cncidr.txt.new 2> /dev/null | grep -q '^20' && echo "done." && break || (rm -f tpl/cncidr.txt.new;echo "Fail!!!")
+	done
+	if [ ! -f tpl/cncidr.txt.new ]; then
+		exit 1
+	fi
+	touch tpl/cncidr.txt
+	NOW_MD5=`md5 tpl/cncidr.txt | awk '{printf $NF}'`
+	NEW_MD5=`md5 tpl/cncidr.txt.new | awk '{printf $NF}'`
+	if [ "$NEW_MD5" != "$NOW_MD5" ]; then
+		echo "Create IP data..." | awk '{printf $0}'
+		mv tpl/cncidr.txt.new tpl/cncidr.txt
+		cat tpl/cncidr.txt | grep ' \- ' | awk -F"'" '{print $2}' | grep -v ':' | awk '{printf ","$1}' > conf/cn_ipv4.txt
+		cat tpl/cncidr.txt | grep ' \- ' | awk -F"'" '{print $2}' | grep ':' | awk '{printf ","$1}' > conf/cn_ipv6.txt
+		echo "done."
+	else
+		rm -f tpl/cncidr.txt.new
+		echo "cncidr: Not new data."
+	fi
+	#导入route.conf里的IP到防火墙
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' > conf/my_ipv4.txt
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep ':' | grep -v 'geo' | awk '{printf ","$1}' > conf/my_ipv6.txt
+
+	# 更新geo数据
+	DAT_LIST='geoip geosite'
+	for DAT in $DAT_LIST; do
+		URL=https://github.com/soffchen/sing-$DAT/releases/latest/download/$DAT.db
+		touch $DAT.db
+		NOW_MD5=`md5 $DAT.db | awk '{printf $NF}'`
+		NEW_MD5=$NOW_MD5
+		echo "Download $URL..." | awk '{printf $0}'
+		curl -skSL -w %{http_code} --retry 3 --connect-timeout 3 $URL -o $DAT.db.new | grep -q '^200$' &&\
+			NEW_MD5=`md5 $DAT.db.new | awk '{printf $NF}'` && echo "done." || (echo "Fail!!!"; exit 1) || continue
+		if [ "$NEW_MD5" != "$NOW_MD5" ]; then
+			mv $DAT.db $DAT.db.old
+			mv $DAT.db.new $DAT.db
+		else
+			rm -f $DAT.db.new
+			echo "$DAT.db: Not new data."
+		fi
+	done
+}
+
+ERROR=0
+if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$ACT" != "" ]; then
+	echo "No found \"sing-box\"!!!"
+	update
+fi
+
+if [ "$TYPE" == "" ]; then
+	TYPE=tun
+fi
+if [ "$TYPE" == "proxy" ]; then
+	_tun_ip6='::1'
+fi
+case $ACT in
+	start)
+		check_run
+		chk_root
+		create_json
+		enable_$TYPE
+		start
+		sleep 1
+		check_connect
+		export TYPE && ./xray_daemons &
+	;;
+	stop)
+		chk_root
+		./xray_daemons stop
+		stop
+		disable_tun
+		disable_proxy
+	;;
+	restart)
+		restart
+		export TYPE && ./xray_daemons &
+	;;
+	config|auto)
+		config
+	;;
+	subscribe)
+		subscribe
+	;;
+	update)
+		update
+	;;
+	*)
+		cat << HELP
+$0 {start|stop|restart|auto|config|subscribe|update} [proxy|tun]
+HELP
+esac

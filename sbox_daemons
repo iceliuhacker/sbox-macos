@@ -1,0 +1,42 @@
+#!/bin/sh
+
+CHECKIP=218.60.45.244
+ACT=$1
+
+
+
+
+if [ "$ACT" = "stop" ] && [ -f run/.start ]; then
+	touch run/.stop
+	exit
+fi
+
+if [ -f run/.start ]; then
+	exit
+fi
+
+PID=`ps axwww | grep 'xray run -confdir run' | grep -v grep | awk '{printf $1}'`
+if [ "$PID" = "" ]; then
+	echo "$0:Xray not running..."
+	rm -f run/.stop run/.restart run/.start
+	exit 1
+fi
+rm -f run/.stop run/.restart
+while true; do
+	sudo -p "Please input sudo password:" -l > /dev/null
+	touch run/.start
+	if [ -f run/.stop ]; then
+		rm -f run/.stop run/.restart run/.start
+		./xrayctl stop
+		exit 0
+	fi
+	OK=`ping -c 5 -t 5 $CHECKIP | grep -c '^64 bytes from '`
+	if [ "$OK" = "0" ]; then
+		touch run/.restart
+	else
+		if [ -f run/.restart ]; then
+			rm -f run/.restart
+			./xrayctl restart $TYPE > log/daemons.log 2>&1 || (cat log/daemons.log; exit 1) || exit 1
+		fi
+	fi
+done

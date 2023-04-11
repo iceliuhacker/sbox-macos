@@ -23,69 +23,67 @@ chk_sudo()
 
 create_conf()
 {
-	echo "Please input name:" | awk '{printf $0}'
+	ls tpl/*.input.tpl 2>/dev/null | sed -e 's/^tpl\///' -e 's/.input.tpl$//' | cat -n 
+	echo "Please select the type of connection you want to create:" | awk '{printf $0}'
+	read IN_TPL
+	IN_TPL=`echo $IN_TPL | awk '{printf int($1)}'`
+	if [ -z $IN_TPL ] || [ "$IN_TPL" = "0" ]; then
+		exit
+	fi
+	TPL=`ls tpl/*.input.tpl 2>/dev/null | sed -n ${IN_TPL}p`
+	if [ -z $TPL ]; then
+		echo "Choice error!!!"
+		exit 1
+	fi
+	
+	echo "Please enter a node name:" | awk '{printf $0}'
 	read CONF_FILE
 	if [ -f db/$CONF_FILE.sbox ]; then
-		echo "Already exist!!!"
-		exit 1
+		echo "Already exists, do you want to overwrite it?" | awk '{printf $0}'
+		read CON
+		echo $CON | egrep -q -i 'y|yes' || exit 1
 	fi
 	touch db/$CONF_FILE.sbox || (echo "Error name!!!"; exit 1) || exit 1
 	rm -f db/$CONF_FILE.sbox
-	#echo "protocol:[vless]" | awk '{printf $0}'
-	#read protocol
-	echo "address:" | awk '{printf $0}'
-	read address
-	echo "port:" | awk '{printf $0}'
-	read port
-	#echo "flow:[xtls-rprx-vision]" | awk '{printf $0}'
-	#read flow
-	echo "id:" | awk '{printf $0}'
-	read id
-	echo "serverName:" | awk '{printf $0}'
-	read serverName
-	echo "Skip certificate validation:false,true[false]" | awk '{printf $0}'
-	read allowInsecure
-	if [ "$protocol" = "" ]; then
-		protocol=vless
-	fi
-	if [ "$flow" = "" ]; then
-		flow=xtls-rprx-vision
-	fi
-	if [ "$serverName" = "" ]; then
-		serverName=$address
-	fi
-	if [ "$allowInsecure" != "true" ]; then
-		allowInsecure=false
-	fi
-	echo "security:tls,reality[tls]" | awk '{printf $0}'
-	read security
-	if [ "$security" = "" ]; then
-		security=tls
-	fi
-	if [ "$security" = "reality" ]; then
-		echo "publicKey:" | awk '{printf $0}'
-		read publicKey
-		echo "shortId:" | awk '{printf $0}'
-		read shortId
-	fi
-	if [ "$address" != "" ] && [ "$port" != "" ] && [ "$id" != "" ]; then
-		cat << EOF > db/$CONF_FILE.sbox
-protocol=$protocol
-address=$address
-port=$port
-flow=$flow
-id=$id
-security=$security
-serverName=$serverName
-allowInsecure=$allowInsecure
-publicKey=$publicKey
-shortId=$shortId
-EOF
-		echo "$CONF_FILE" > conf/run.conf
-		#create_json
-	fi
+	LINE=0
+	while true; do
+		LINE=`expr $LINE + 1`
+		STR=`sed -n ${LINE}p $TPL`
+		if [ -z "$STR" ]; then
+			break
+		fi
+		
+		VAR_NAME=`echo $STR | awk -F'=' '{printf $1}'`
+		VAR_VALUE=`echo $STR | awk -F'=' '{printf $2}'`
+
+		if [ "$VAR_NAME" = "protocol" ] || [  "$VAR_NAME" = "flow" ]; then
+			echo "${VAR_NAME}=${VAR_VALUE}" >> db/$CONF_FILE.sbox
+			continue
+		fi
+		if [ "$VAR_NAME" = "serverName" ] && [ "$VAR_VALUE" = "sni" ]; then
+			echo "serverName=$sni" >> db/$CONF_FILE.sbox
+			continue
+		fi
+		#获取提问里[]的内容，并设置为可选项以及默认赋值。
+		SELECT=`echo $VAR_VALUE | awk -F'[\\\[\\\]]' '{printf $2}'`
+		if [ ! -z $SELECT ]; then
+			echo "$VAR_VALUE" | awk '{printf $0}'
+			read TMP_VAR
+			echo $SELECT | tr -s ',' '\n' | grep -q "^${TMP_VAR}$" || TMP_VAR=`echo $SELECT | awk -F',' '{printf $1}'`
+			echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
+			continue
+		fi
+
+		echo $VAR_VALUE | awk '{printf $0}'
+		read TMP_VAR
+		echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
+		export ${VAR_NAME}=${TMP_VAR}
+	done
+	cat db/$CONF_FILE.sbox
 }
 
+create_conf
+exit
 config()
 {
 	echo '     0  new'

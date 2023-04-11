@@ -79,6 +79,7 @@ create_conf()
 		echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
 		export ${VAR_NAME}=${TMP_VAR}
 	done
+	echo "#### Creating Connection Nodes $CONF_FILE ####"
 	cat db/$CONF_FILE.sbox
 }
 

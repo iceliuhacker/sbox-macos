@@ -1,6 +1,6 @@
 {
     "log": {
-        "level": "info",
+        "level": "debug",	//日志等级，可选值：trace debug info warn error fatal panic
         "timestamp": true
     },
     "inbounds": [

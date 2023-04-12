@@ -159,10 +159,8 @@ create_json()
 		
 		if [ "$RUN_COUNT" -gt "1" ]; then
 			TAG="-${XCONF}"
-			probeInterval=10s
 		else
 			TAG=''
-			probeInterval=9999h
 		fi
 		cat $TPL | sed -e "s/_TAG_/${TAG}/g" \
 						-e "s/_protocol_/${protocol}/g" \
@@ -177,10 +175,9 @@ create_json()
 						-e "s/_allowInsecure_/${allowInsecure}/g" \
 						-e "s/_publicKey_/${publicKey}/g" \
 						-e "s/_shortId_/${shortId}/g" \
-						> run/500_$XCONF.json
+						> run/600_$XCONF.json
 	done
 
-	EXIST_RT=`netstat -f inet -p ip -rn | grep '^[0-9]' | awk '{print " "$1"$"}' | tr '\n' '|' | sed 's/|$//'`
 	cat tpl/main.json.tpl > run/000_main.json
 	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
 		if [ "$TYPE" = "fwd" ]; then
@@ -188,6 +185,7 @@ create_json()
 		else
 			auto_route=true
 		fi
+		EXIST_RT=`netstat -f inet -p ip -rn | grep '^[0-9]' | awk '{print " "$1"$"}' | tr '\n' '|' | sed 's/|$//'`
 		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | egrep -v ":|$EXIST_RT" | awk '{printf ",\""$2"\\\/32\""}'`
 		DNS_RT_IPV6=`cat /etc/resolv.conf | grep '^nameserver ' | grep ':' | awk '{printf "\""$2"\\\/128\","}' | sed 's/,$//'`
 		cat tpl/tun.json.tpl | sed -e "s/_tun_ip_/${_tun_ip}/g" \
@@ -212,7 +210,7 @@ EOF
 		for(i=1;i<=LEN;i++) {
 			print "            {";
 			print "                \"tag\": \""DNS[i]"\",";
-			print "                \"address\": \""DNS[i]"\",";
+			print "                \"address\": \"tcp://"DNS[i]"\",";
 			print "                \"detour\": \""$3"\"";
 			print "            },";
 		}
@@ -279,7 +277,7 @@ EOF
     }
 }
 EOF
-	cat << EOF >> run/900_default_out.json
+	cat << EOF >> run/900_outbounds.json
 {
     "outbounds": [
         {
@@ -458,6 +456,7 @@ subscribe()
 	if [ "$allowInsecure" != "true" ]; then
 		allowInsecure=false
 	fi
+	mkdir -p db
 	rm -f db/.subscribe
 	echo "Get $SUB_URL data..." | awk '{printf $0}'
 	curl -sSL --connect-timeout 5 $SUB_URL -o db/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1

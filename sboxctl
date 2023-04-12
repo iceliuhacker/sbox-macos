@@ -185,14 +185,9 @@ create_json()
 		else
 			auto_route=true
 		fi
-		EXIST_RT=`netstat -f inet -p ip -rn | grep '^[0-9]' | awk '{print " "$1"$"}' | tr '\n' '|' | sed 's/|$//'`
-		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | egrep -v ":|$EXIST_RT" | awk '{printf ",\""$2"\\\/32\""}'`
-		DNS_RT_IPV6=`cat /etc/resolv.conf | grep '^nameserver ' | grep ':' | awk '{printf "\""$2"\\\/128\","}' | sed 's/,$//'`
 		cat tpl/tun.json.tpl | sed -e "s/_tun_ip_/${_tun_ip}/g" \
 									-e "s/_tun_ip6_/${_tun_ip6}/g" \
 									-e "s/_auto_route_/${auto_route}/g" \
-									-e "s/_DNS_RT_IPV4_/${DNS_RT_IPV4}/g" \
-									-e "s/_DNS_RT_IPV6_/${DNS_RT_IPV6}/g" \
 									> run/100_tun.json
 	fi
 
@@ -208,9 +203,10 @@ EOF
 	| awk -F'=' '{
 		LEN=split($2,DNS,",");
 		for(i=1;i<=LEN;i++) {
+			if ($3=="UP_LINK") DNS[i]="tcp://"DNS[i];
 			print "            {";
 			print "                \"tag\": \""DNS[i]"\",";
-			print "                \"address\": \"tcp://"DNS[i]"\",";
+			print "                \"address\": \""DNS[i]"\",";
 			print "                \"detour\": \""$3"\"";
 			print "            },";
 		}

@@ -83,14 +83,12 @@ create_conf()
 	cat db/$CONF_FILE.sbox
 }
 
-create_conf
-exit
 config()
 {
 	echo '     0  new'
 	ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | cat -n
 cat << EOF
-Please select configuration file,Multiple separated by spaces,99 is all.
+Please select configuration file,Multiple separated by spaces,99 is all,DEL for delete node.
 Example_1:1      -> select 1.
 Example_2:1,3,5  -> select 1,3,5.
 Example_3:99     -> select all.
@@ -126,7 +124,7 @@ EOF
 
 create_json()
 {
-	./xray version
+	./sing-box version
 	mkdir -p run
 	#创建主配置
 	rm -f run/*.json
@@ -134,25 +132,29 @@ create_json()
 	DEST_RULE_LIST=''
 	RUN_CONF=`cat conf/run.conf`
 	for XCONF in $RUN_CONF; do
-		source conf/$XCONF.xray || RUN_COUNT=`expr $RUN_COUNT - 1`
+		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"
 			exit
 		fi
-		JCON=0
-		if [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ -f tpl/$protocol.$flow.json.tpl ]; then
-			TPL=tpl/$protocol.$flow.json.tpl
-			JCON=1
+		if [ -z $network ]; then
+			network=tcp
 		fi
-		if [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$security" = "reality" ] && [ "$publicKey" != "" ] && [ -f tpl/$protocol.$flow.$security.json.tpl ]; then
+		JCON=0
+		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "reality" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			JCON=1
 		fi
+		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
+			TPL=tpl/$protocol.$flow.$security.json.tpl
+			JCON=1
+		fi
+
 		if [ "$JCON" = "0" ]; then
-			echo "Error xray date \"$XCONF\"!!"
+			echo "Error sing-box date \"$XCONF\"!!"
 			continue
 		fi
-		DEST_RULE_LIST=$DEST_RULE_LIST`cat conf/$XCONF.xray | grep 'address=' | awk -F'=' '{print "pass out quick inet proto tcp from any to "$2","}'`
+		DEST_RULE_LIST=$DEST_RULE_LIST`cat db/$XCONF.sbox | grep 'address=' | awk -F'=' '{print "pass out quick inet proto tcp from any to "$2","}'`
 		
 		if [ "$RUN_COUNT" -gt "1" ]; then
 			TAG="-${XCONF}"
@@ -167,28 +169,75 @@ create_json()
 						-e "s/_port_/${port}/g" \
 						-e "s/_flow_/${flow}/g" \
 						-e "s/_id_/${id}/g" \
-						-e "s/_serverName_/${serverName}/g" \
-						-e "s/_allowInsecure_/${allowInsecure}/g" \
 						-e "s/_security_/${security}/g" \
+						-e "s/_sni_/${sni}/g" \
+						-e "s/_serverName_/${serverName}/g" \
+						-e "s/_fingerprint_/${fp}/g" \
+						-e "s/_allowInsecure_/${allowInsecure}/g" \
 						-e "s/_publicKey_/${publicKey}/g" \
 						-e "s/_shortId_/${shortId}/g" \
 						> run/$XCONF.json
 	done
 
-	cat tpl/main.json.tpl | sed -e "s/_TUN_IP6_/${_tun_ip6}/g" -e "s/_probeInterval_/${probeInterval}/g" > run/main.json
+	#cat tpl/main.json.tpl | sed -e "s/_TUN_IP6_/${_tun_ip6}/g" -e "s/_probeInterval_/${probeInterval}/g" > run/main.json
+	cat tpl/main.json.tpl > run/000_main.json
+	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
+		if [ "$TYPE" = "fwd" ]; then
+			auto_route=false
+		else
+			auto_route=true
+		fi
+		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | grep -v ':' | awk '{printf "\""$2"\","}' | sed 's/,$//'`
+		DNS_RT_IPV6=`cat /etc/resolv.conf | grep '^nameserver ' | grep ':' | awk '{printf "\""$2"\","}' | sed 's/,$//'`
+		cat tpl/tun.json.tpl | sed -e "s/_tun_ip_/${_tun_ip}/g" \
+									-e "s/_tun_ip6_/${_tun_ip6}/g" \
+									-e "s/_auto_route_/${auto_route}/g" \
+									-e "s/_DNS_RT_IPV4_/${DNS_RT_IPV4}/g" \
+									-e "s/_DNS_RT_IPV6_/${DNS_RT_IPV6}/g" \
+									> run/100_tun.json
+	fi
 
 	#创建DNS规则
-	cat << EOF >> run/dns.json
+	cat << EOF >> run/200_dns.json
 {
     "dns": {
-        "tag": "internal_dns",
-        //"clientIp": "0.0.0.0",
-        "queryStrategy": "UseIPv4",        //UseIPv4 只查询 A 记录；UseIPv6 只查询 AAAA 记录。默认值为 UseIP，即查询 A 和 AAAA 记录。
-        "disableCache": false,
-        "disableFallback": false,
-        "disableFallbackIfMatch": false,
+        "strategy": "ipv4_only",
         "servers": [
 EOF
+	grep 'nameserver=' conf/dns.conf \
+	| awk -F'#' '{if ($1!="") print $1}' \
+	| awk -F'=' '{
+		LEN=split($2,DNS,",");
+		for(i=1;i<=LEN;i++) {
+			print "            {";
+			print "                \"tag\": \""DNS[i]"\",";
+			print "                \"address\": \""DNS[i]"\",";
+			print "                \"detour\": \""$3"\"";
+			print "            },";
+		}
+	}' >> run/200_dns.json
+
+	cat << EOF >> run/200_dns.json
+        ],
+        "rules": [
+EOF
+	grep -v 'nameserver=' conf/dns.conf \
+	| awk -F'#' '{if ($1!="") print $1}' | grep 'domain:' | sed 's/domain://g' \
+	| awk -F'=' '{
+		DLIST=$1;
+		sub(/,/,"\",\"",DLIST);
+		LEN=split($2,DNS,",");
+		for(i=1;i<=LEN;i++) {
+			print "            {";
+			print "                \"domain_suffix\": [\""DLIST"\"],";
+			print "                \"server\": \""DNS[i]"\"";
+			print "            },";
+		};
+
+	}' >> run/200_dns.json
+
+	exit
+
 	DNS_INFO=`cat conf/dns.conf | awk -F'#' '{print $1}'`
 	for DNS_SET in $DNS_INFO; do
 		HOST_LIST=`echo $DNS_SET | awk -F'=' '{printf $1}' | sed 's/,/","/g'`

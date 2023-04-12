@@ -85,6 +85,7 @@ create_conf()
 
 config()
 {
+	mkdir -p db
 	echo '     0  new'
 	ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | cat -n
 cat << EOF
@@ -179,7 +180,7 @@ create_json()
 						> run/500_$XCONF.json
 	done
 
-	#cat tpl/main.json.tpl | sed -e "s/_TUN_IP6_/${_tun_ip6}/g" -e "s/_probeInterval_/${probeInterval}/g" > run/main.json
+	EXIST_RT=`netstat -f inet -p ip -rn | grep '^[0-9]' | awk '{print " "$1"$"}' | tr '\n' '|' | sed 's/|$//'`
 	cat tpl/main.json.tpl > run/000_main.json
 	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
 		if [ "$TYPE" = "fwd" ]; then
@@ -187,7 +188,7 @@ create_json()
 		else
 			auto_route=true
 		fi
-		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | grep -v ':' | awk '{printf "\""$2"\\\/32\","}' | sed 's/,$//'`
+		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | egrep -v ":|$EXIST_RT" | awk '{printf ",\""$2"\\\/32\""}'`
 		DNS_RT_IPV6=`cat /etc/resolv.conf | grep '^nameserver ' | grep ':' | awk '{printf "\""$2"\\\/128\","}' | sed 's/,$//'`
 		cat tpl/tun.json.tpl | sed -e "s/_tun_ip_/${_tun_ip}/g" \
 									-e "s/_tun_ip6_/${_tun_ip6}/g" \
@@ -457,25 +458,25 @@ subscribe()
 	if [ "$allowInsecure" != "true" ]; then
 		allowInsecure=false
 	fi
-	rm -f conf/.subscribe
+	rm -f db/.subscribe
 	echo "Get $SUB_URL data..." | awk '{printf $0}'
-	curl -sSL --connect-timeout 5 $SUB_URL -o conf/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
-	cat conf/.subscribe | grep '^vless://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
-	NODE_LIST=`cat conf/.subscribe | grep '^vless://' | awk -F'#' '{if (NF==2) print $NF}'`
+	curl -sSL --connect-timeout 5 $SUB_URL -o db/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
+	cat db/.subscribe | grep '^vless://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
+	NODE_LIST=`cat db/.subscribe | grep '^vless://' | awk -F'#' '{if (NF==2) print $NF}'`
 	if [ "$NODE_LIST" = "" ]; then
 		echo "Error data!!!"
 		exit 1
 	fi
-	echo "Convert subscribe to xray:"
+	echo "Convert subscribe to sing-box:"
 	for NODE in $NODE_LIST; do
-		if [ -f conf/$NODE.xray ]; then
+		if [ -f db/$NODE.sbox ]; then
 			SUB_ACT="Update"
 		else
 			SUB_ACT="Create"
 		fi
-		echo -e "protocol=vless\nallowInsecure=$allowInsecure" > conf/$NODE.xray || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
-		echo "$SUB_ACT $NODE.xray..." | awk '{printf $0}'
-		NODE_INFO=`cat conf/.subscribe | grep "#${NODE}$" | sed -e 's@vless://@@' -e "s/#${NODE}$//"`
+		echo -e "protocol=vless\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
+		echo "$SUB_ACT $NODE.sbox..." | awk '{printf $0}'
+		NODE_INFO=`cat db/.subscribe | grep "#${NODE}$" | sed -e 's@vless://@@' -e "s/#${NODE}$//"`
 		echo $NODE_INFO | tr -s '@?&' '\n' | awk '{
 			if (NR==1) print "id="$0;
 			if (NR==2) {
@@ -494,7 +495,7 @@ subscribe()
 				-e 's/^pbk=/publicKey=/' \
 				-e 's/^sid=/shortId=/' \
 				-e 's/^address=\[/address=/' \
-				>> conf/$NODE.xray && echo "done." || echo "Fail!!!"
+				>> db/$NODE.sbox && echo "done." || echo "Fail!!!"
 	done
 }
 

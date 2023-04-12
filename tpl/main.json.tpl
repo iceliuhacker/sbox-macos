@@ -9,7 +9,7 @@
             "listen": "::",
             "listen_port": 65080, // 本地http和socks5监听端口
             "domain_strategy": "ipv4_only",
-			"set_system_proxy": true
+            "set_system_proxy": true
         }
-    ],
+    ]
 }

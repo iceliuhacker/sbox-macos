@@ -176,7 +176,7 @@ create_json()
 						-e "s/_allowInsecure_/${allowInsecure}/g" \
 						-e "s/_publicKey_/${publicKey}/g" \
 						-e "s/_shortId_/${shortId}/g" \
-						> run/$XCONF.json
+						> run/500_$XCONF.json
 	done
 
 	#cat tpl/main.json.tpl | sed -e "s/_TUN_IP6_/${_tun_ip6}/g" -e "s/_probeInterval_/${probeInterval}/g" > run/main.json
@@ -187,8 +187,8 @@ create_json()
 		else
 			auto_route=true
 		fi
-		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | grep -v ':' | awk '{printf "\""$2"\","}' | sed 's/,$//'`
-		DNS_RT_IPV6=`cat /etc/resolv.conf | grep '^nameserver ' | grep ':' | awk '{printf "\""$2"\","}' | sed 's/,$//'`
+		DNS_RT_IPV4=`cat /etc/resolv.conf | grep '^nameserver ' | grep -v ':' | awk '{printf "\""$2"\\\/32\","}' | sed 's/,$//'`
+		DNS_RT_IPV6=`cat /etc/resolv.conf | grep '^nameserver ' | grep ':' | awk '{printf "\""$2"\\\/128\","}' | sed 's/,$//'`
 		cat tpl/tun.json.tpl | sed -e "s/_tun_ip_/${_tun_ip}/g" \
 									-e "s/_tun_ip6_/${_tun_ip6}/g" \
 									-e "s/_auto_route_/${auto_route}/g" \
@@ -215,138 +215,83 @@ EOF
 			print "                \"detour\": \""$3"\"";
 			print "            },";
 		}
-	}' >> run/200_dns.json
+	}' | sed '$s/},/}/' >> run/200_dns.json
 
 	cat << EOF >> run/200_dns.json
         ],
         "rules": [
 EOF
-	grep -v 'nameserver=' conf/dns.conf \
-	| awk -F'#' '{if ($1!="") print $1}' | grep 'domain:' | sed 's/domain://g' \
+	egrep 'domain_suffix=|geosite=' conf/dns.conf \
+	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
-		DLIST=$1;
+		DLIST=$2;
 		sub(/,/,"\",\"",DLIST);
-		LEN=split($2,DNS,",");
+		LEN=split($3,DNS,",");
 		for(i=1;i<=LEN;i++) {
 			print "            {";
-			print "                \"domain_suffix\": [\""DLIST"\"],";
+			print "                \""$1"\": [\""DLIST"\"],";
 			print "                \"server\": \""DNS[i]"\"";
 			print "            },";
 		};
 
-	}' >> run/200_dns.json
-
-	exit
-
-	DNS_INFO=`cat conf/dns.conf | awk -F'#' '{print $1}'`
-	for DNS_SET in $DNS_INFO; do
-		HOST_LIST=`echo $DNS_SET | awk -F'=' '{printf $1}' | sed 's/,/","/g'`
-		HOST_DNS=`echo $DNS_SET | awk -F'=' '{printf $2}' | sed 's/,/ /g'`
-		EXT_NET=`echo $DNS_SET | awk -F'=' '{printf $3}'`
-		if [ "$EXT_NET" != "" ]; then
-			EXT_NET=`echo $EXT_NET | sed -e 's/^ext:/"expectIPs": ["/' -e 's/,/","/g' -e 's/$/"],/'`
-		else
-			EXT_NET=
-		fi
-		for DNS in $HOST_DNS; do
-			echo "Check DNS $DNS..." | awk '{printf $0}'
-			sudo host -W 1 -t soa . $DNS > /dev/null 2>&1 && echo "OK." || (echo "Skip!"; exit 1) ||continue
-			if [ "$HOST_LIST" = "any" ]; then
-				cat << EOF >> run/dns.json
-            "$DNS",
-EOF
-			else
-				cat << EOF >> run/dns.json
-            {
-                "address": "$DNS",
-                $EXT_NET
-                "domains": ["$HOST_LIST"]
-            },
-EOF
-			fi
-		done
-	done
-	cat << EOF >> run/dns.json
-            "localhost"
+	}' | sed '$s/},/}/' >> run/200_dns.json
+	cat << EOF >> run/200_dns.json
         ]
     }
 }
 EOF
 
 	#创建路由规则
-	cat << EOF >> run/route.json
+	cat << EOF >> run/300_route.json
 {
-    "routing": {
-        //AsIs:仅用 [domain] 来匹配(不使用内置DNS)
-        //IPIfNonMatch:如果其他所有规则都匹配不上，那就转化成 IP 去匹配 IP 规则
-        //IPOnDemand:当匹配时碰到任何基于 IP 的规则，将域名立即解析为 IP 进行匹配
-        "domainStrategy": "IPIfNonMatch",
+    "route": {
+        "auto_detect_interface": true,
         "rules": [
             {
-                "type": "field",
-                "protocol": ["bittorrent"],               
-                "outboundTag": "direct"
+                "port": 53,
+                "outbound": "dns-out"
             },
             {
-                "type": "field",
-                "inboundTag": ["dns-in","dns6-in"],
-                "outboundTag": "dns-out"
+                "protocol": "dns",
+                "outbound": "dns-out"
             },
 EOF
 	RT_INFO=`cat conf/route.conf | awk -F'#' '{print $1}'`
 	for RT in $RT_INFO;do
 		HOST_TYPE=`echo $RT | awk -F'=' '{printf $1}'`
+		if [ "$HOST_TYPE" = "ip" ]; then
+			HOST_TYPE=ip_cidr
+		fi
 		HOST_LIST=`echo $RT | awk -F'=' '{printf $2}' | sed 's/,/","/g'`
 		HOST_ACT=`echo $RT | awk -F'=' '{printf $3}'`
-		if [ "$TAG" != "" ]; then
-			OUT_TAG=balancerTag
-		else
-			OUT_TAG=outboundTag
-		fi
-		if [ "$HOST_ACT" = "direct" ]; then
-			OUT_TAG=outboundTag
-			OUT_DST=direct
-		else
-			OUT_DST=UP_LINK
-		fi
-		cat << EOF >> run/route.json
+		
+		cat << EOF >> run/300_route.json
             {
-                "type": "field",
                 "$HOST_TYPE": ["$HOST_LIST"],
-                "$OUT_TAG": "$OUT_DST"
+                "outbound": "$HOST_ACT"
             },
 EOF
 	done
-	cat << EOF >> run/route.json
-            {
-                "type": "field",
-                "ip": ["0.0.0.0/0"],
-                "$OUT_TAG": "UP_LINK"
-            }
-        ],
-        "balancers": [
-		    {
-                "tag": "UP_LINK",
-                "strategy": {
-                    "type": "leastPing"
-                },
-                "selector": [ "UP_LINK" ]	//匹配tag标签前缀
-            }
+	sed -i '' '$s/},/}/' run/300_route.json
+	cat << EOF >> run/300_route.json
         ]
     }
 }
 EOF
-	cat << EOF >> run/000_default_out.json
+	cat << EOF >> run/900_default_out.json
 {
     "outbounds": [
         {
-            "tag": "direct",
-            "protocol": "freedom"
-        },
-        // 建立一个dns解析服务，优先根据internal_dns的规则反馈解析，internal_dns都无响应则根据dns-in指定的IP解析
-        {
             "tag": "dns-out",
-            "protocol": "dns"
+            "type": "dns"
+        },
+        {
+            "tag": "direct",
+            "type": "direct"
+        },
+        {
+            "tag": "block",
+            "type": "block"
         }
     ]
 }

@@ -123,7 +123,6 @@ EOF
 
 create_json()
 {
-	./sing-box version
 	mkdir -p run
 	#创建主配置
 	rm -f run/*.json
@@ -498,6 +497,7 @@ update()
 	if [ -z $PID ]; then
 		SOCKS5=''
 	fi
+	./sing-box version
 	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
 	NEW_VERSION=`curl -sSL https://api.github.com/repos/SagerNet/sing-box/tags | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
 	if [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
@@ -572,7 +572,7 @@ update()
 help()
 {
 	cat << HELP
-$0 {start|stop|restart|config|subscribe|update} [tun|fwd|proxy]
+$0 {start|stop|restart|config|subscribe|update} [tun|fwd|proxy|URL]
 start		Start sing-box.
 stop		Stop sing-box
 restart		Restart Sing-box
@@ -583,6 +583,7 @@ Optional:
 	tun		Use routing mode to forward user data. (Warning:Destroying local routing)
 	fwd		Use PF firewall mode to forward user data.
 	proxy	Using system proxy.
+	URL     Subscription address.(Not a string URL, but a URL that starts with HTTP.)
 HELP
 }
 
@@ -595,7 +596,7 @@ fi
 if [ "$TYPE" == "" ]; then
 	TYPE=tun
 fi
-if [ "$TYPE" != "tun" ] && [ "$TYPE" != "fwd" ] && [ "$TYPE" != "proxy" ]; then
+if [ "$ACT" != "subscribe" ] && [ "$TYPE" != "" ] && [ "$TYPE" != "tun" ] && [ "$TYPE" != "fwd" ] && [ "$TYPE" != "proxy" ]; then
 	help
 	exit 1
 fi

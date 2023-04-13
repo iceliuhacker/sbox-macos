@@ -178,6 +178,11 @@ create_json()
 						> run/600_$XCONF.json
 	done
 
+	if [ "$RUN_COUNT" -gt "1" ]; then
+		TAG_LIST=`cat conf/run.conf | awk '{printf "UP_LINK-"$1"\",\""}' | sed 's/","$//'`
+		cat tpl/selector.json.tpl | sed -e "s/_TAG_LIST_/${TAG_LIST}/g" > run/610_selector.json
+	fi
+	
 	cat tpl/main.json.tpl > run/000_main.json
 	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
 		if [ "$TYPE" = "fwd" ]; then
@@ -195,18 +200,22 @@ create_json()
 	cat << EOF >> run/200_dns.json
 {
     "dns": {
-        "strategy": "ipv4_only",
         "servers": [
 EOF
 	grep 'nameserver=' conf/dns.conf \
 	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
 		LEN=split($2,DNS,",");
+		S_strategy="";
 		for(i=1;i<=LEN;i++) {
-			if ($3=="UP_LINK") DNS[i]="tcp://"DNS[i];
+			if ($3=="UP_LINK") {
+				DNS[i]="tcp://"DNS[i];
+				S_strategy="ipv4_only";
+			};
 			print "            {";
 			print "                \"tag\": \""DNS[i]"\",";
 			print "                \"address\": \""DNS[i]"\",";
+			print "                \"strategy\": \""S_strategy"\",";
 			print "                \"detour\": \""$3"\"";
 			print "            },";
 		}

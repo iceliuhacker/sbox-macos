@@ -382,6 +382,7 @@ check_startd_ok()
 	for x in `seq 20`; do
 		sleep 0.2
 		ifconfig | grep -q $_tun_ip && STARTED=1 && break
+		netstat -an | grep -q '*.65080' && STARTED=1 && break
 	done
 	if [ "$STARTED" != "1" ]; then
 		stop

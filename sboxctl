@@ -208,12 +208,12 @@ EOF
 		LEN=split($2,DNS,",");
 		S_strategy="";
 		for(i=1;i<=LEN;i++) {
+			print "            {";
+			print "                \"tag\": \""DNS[i]"\",";
 			if ($3=="UP_LINK") {
 				DNS[i]="tcp://"DNS[i];
 				S_strategy="ipv4_only";
 			};
-			print "            {";
-			print "                \"tag\": \""DNS[i]"\",";
 			print "                \"address\": \""DNS[i]"\",";
 			print "                \"strategy\": \""S_strategy"\",";
 			print "                \"detour\": \""$3"\"";

@@ -22,10 +22,10 @@ config          设置使用的节点，如果没有也可以在这里添加，�
 subscribe      从订阅URL里获取节点资源
 update          升级sing-box以及所需要的geoip、geosite文件。
 Optional:
-        tun        使用路由模式(警告：将破坏主动访问你的路由)
-        fwd       使用PF防火墙转发，如果你已经启用了防火墙建议你不要使用，优点是不破坏路由。
+        tun      使用路由模式(警告：将破坏主动访问你的路由)
+        fwd      使用PF防火墙转发，如果你已经启用了防火墙建议你不要使用，优点是不破坏路由。
         proxy    系统代理模式，这个没什么可说的。
-		URL       一个订阅URL，如果URL含有“?,&”等特殊符号，请使用“'”单引号括起来。	
+		URL      一个订阅URL，如果URL含有“?,&”等特殊符号，请使用“'”单引号括起来。	
 ```
 ## 使用范例：
 ```
@@ -53,7 +53,7 @@ Please input:[0]1 3    <--这里选择了1和3两个节点
 ```
 ```
     启动服务：
-./sboxctl start fwd
+./sboxctl start fwd    <---这里以PF防火墙转发模式启动
 Please input sudo password:
 Connect x.x.x.1-VLESS_VS.
 Connect x.x.x.3-VLESS_VS.

@@ -1,4 +1,4 @@
-# Xray-macos
+# sbox-macos
 ```
 Mac OS下一键使用的sing-box脚本
 目前仅支持：

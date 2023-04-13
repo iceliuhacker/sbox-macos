@@ -1,6 +1,6 @@
 {
     "log": {
-        "level": "debug",	//日志等级，可选值：trace debug info warn error fatal panic
+        "level": "info",	//日志等级，可选值：trace debug info warn error fatal panic
         "timestamp": true
     },
     "inbounds": [
@@ -9,6 +9,8 @@
             "listen": "::",
             "listen_port": 65080, // 本地http和socks5监听端口
             //"domain_strategy": "ipv4_only",
+            "sniff": true,
+            "sniff_override_destination": true,
             "set_system_proxy": true
         }
     ]

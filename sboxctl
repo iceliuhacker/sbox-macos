@@ -1,11 +1,9 @@
 #!/bin/bash
 
 
-_fly_net='1.0.0.0/8,2.0.0.0/7,4.0.0.0/6,8.0.0.0/5,16.0.0.0/4,32.0.0.0/3,64.0.0.0/2,128.0.0.0/1,198.18.0.0/15'
 _skip_net='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,240.0.0.0/4,0.0.0.0/8,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24'
 _skip_net6='::1/128,fc00::/7,fe80::/10'
 CHK_LIST='www.google.com twitter.com www.facebook.com www.baidu.com www.sohu.com'
-_tun=utun100
 _tun_ip=100.100.100.100
 _tun_ip6='fd00::100:100:100:100'
 ACT=$1
@@ -115,8 +113,8 @@ EOF
 	fi
 	PID=`ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{printf $1}'`
 	if [ "$PID" != "" ]; then
-		chk_sudo
-		sudo pfctl -sr 2>/dev/null | grep -q '^pass out quick route-to ' && TYPE=tun || TYPE=proxy
+		#chk_sudo
+		#sudo pfctl -sr 2>/dev/null | grep -q '^pass out quick route-to ' && TYPE=tun || TYPE=proxy
 		restart
 	else
 		create_json
@@ -186,13 +184,16 @@ create_json()
 	cat tpl/main.json.tpl > run/000_main.json
 	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
 		if [ "$TYPE" = "fwd" ]; then
-			auto_route=false
+			GDNS='"8.8.8.8/32"'
+			GDNS6='"2001:4860:4860::8888/128"'
 		else
-			auto_route=true
+			GDNS=''
+			GDNS6=''
 		fi
 		cat tpl/tun.json.tpl | sed -e "s/_tun_ip_/${_tun_ip}/g" \
 									-e "s/_tun_ip6_/${_tun_ip6}/g" \
-									-e "s/_auto_route_/${auto_route}/g" \
+									-e "s@_GDNS_@${GDNS}@g" \
+									-e "s@_GDNS6_@${GDNS6}@g" \
 									> run/100_tun.json
 	fi
 
@@ -302,21 +303,9 @@ EOF
 EOF
 }
 
-enable_tun()
+enable_pf()
 {
-	STARTED=0
-	sudo ./tun2socks -device tun://$_tun -proxy "socks5://127.0.0.1:65080" > log/tun2socks.log 2>&1 &
-	for x in `seq 1 20`; do
-		sleep 0.2
-		ifconfig $_tun >/dev/null 2>&1 && STARTED=1 && break
-	done
-	if [ "$STARTED" != "1" ]; then
-		echo "Start tun2socks Fail!!!"
-		cat log/tun2socks.log
-		exit 1
-	fi
-	sudo ifconfig $_tun inet $_tun_ip/32 $_tun_ip up
-	sudo ifconfig $_tun inet6 $_tun_ip6/128 $_tun_ip6 up
+	check_startd_ok
 	ME=`whoami`
 	if [ -f conf/my_ipv4.txt ]; then
 		_skip_net="$_skip_net"`cat conf/my_ipv4.txt`
@@ -330,40 +319,32 @@ enable_tun()
 	if [ -f conf/cn_ipv6.txt ]; then
 		_skip_net6="$_skip_net6"`cat conf/cn_ipv6.txt`
 	fi
-	cat << EOF > conf/pf.xray.rules
+	TUN_IF=`netstat -f inet -rn | awk '{if ($1=="'$_tun_ip'") printf $4}'`
+	cat << EOF > conf/pf.rules
 table <skip_net> { $_skip_net }
 table <skip_net6> { $_skip_net6 }
-#table <fly_net> { $_fly_net }
-fwd_ports = "{1:52,54:65535}"
-rdr pass on lo0 inet proto { tcp,udp } from any to any port 53 -> 127.0.0.1 port 65053
-rdr pass on lo0 inet proto { tcp,udp } from any to ! <skip_net> -> 127.0.0.1 port 65041
-
-rdr pass on lo0 inet6 proto { tcp,udp } from any to any port 53 -> ::1 port 65053
-#rdr pass on $_tun inet6 proto { tcp,udp } from any to ! <skip_net6> -> $_tun_ip6 port 65041
 
 `echo "${DEST_RULE_LIST}" | tr ',' '\n' | awk -F':' '{if (NF>1) {sub(/ inet /," inet6 ");print $0;} else print $1}'`
 
-pass out quick route-to (lo0 127.0.0.1) inet proto {tcp,udp} from any to any port 53 user > 0
-pass out quick route-to (lo0 127.0.0.1) inet proto tcp from any to ! <skip_net> user > 0
-pass out quick route-to ($_tun $_tun_ip) inet proto udp from any to ! <skip_net> user > 0
+pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
+pass out quick route-to ($TUN_IF $_tun_ip) inet from any to ! <skip_net> user = $ME
 
-pass out quick route-to (lo0 ::1) inet6 proto {tcp,udp} from any to any port 53 user > 0
-#pass out quick route-to ($_tun $_tun_ip6) inet6 proto {tcp,udp} from any to ! <skip_net6> user > 0
+pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
+pass out quick route-to ($TUN_IF $_tun_ip6) inet6 from any to ! <skip_net6> user = $ME
 
 #pass out quick all
 EOF
 	sudo pfctl -e > /dev/null 2>&1
-	sudo pfctl -f conf/pf.xray.rules > /dev/null 2>&1 || (echo "PF firewall load Fail!!!"; sudo pfctl -f conf/pf.xray.rules; disable_tun; exit 1) || exit 1
+	sudo pfctl -f conf/pf.rules > /dev/null 2>&1 || (echo "PF firewall load Fail!!!"; sudo pfctl -f conf/pf.rules; exit 1) || exit 1
 	sudo killall -HUP mDNSResponder 2>&1
-	enable_proxy
+	#enable_proxy
 }
 
-disable_tun()
+disable_pf()
 {
 	sudo pfctl -dF all > /dev/null 2>&1
 	sudo killall -HUP mDNSResponder 2>&1
-	sudo kill -9 `ps ax | grep "tun2socks -device tun://$_tun " | egrep -v 'grep|sudo' | awk '{print $1}'` > /dev/null 2>&1
-	disable_proxy
+	#disable_proxy
 }
 
 enable_proxy()
@@ -389,54 +370,61 @@ disable_proxy()
 
 check_run()
 {
-	PID=`ps axwww | grep 'xray run -confdir run' | grep -v grep | awk '{printf $1}'`
+	PID=`ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{printf $1}'`
 	if [ "$PID" != "" ]; then
 		echo "Already running..."
 		exit 0
 	fi
 }
 
+check_startd_ok()
+{
+	STARTED=0
+	for x in `seq 20`; do
+		sleep 0.2
+		ifconfig | grep -q $_tun_ip && STARTED=1 && break
+	done
+	if [ "$STARTED" != "1" ]; then
+		stop
+		#disable_tun
+		#disable_proxy
+		disable_pf
+		echo "Start Fail!!!"
+		cat log/sing-box.log
+		exit 1
+	fi
+}
+
 start()
 {
-	if [ ! -f run/main.json ] || [ ! -f run/dns.json ] || [ ! -f run/route.json ] || [ ! -f run/000_default_out.json ]; then
+	if [ ! -f run/000_main.json ] || [ ! -f run/200_dns.json ] || [ ! -f run/300_route.json ] || [ ! -f run/900_outbounds.json ]; then
 		config
 	fi
-	sudo ./xray run -confdir run > log/xray.log 2>&1 &
+	sudo ./sing-box run -C run > log/sing-box.log 2>&1 &
 }
 
 stop()
 {
-	sudo kill -9 `ps axwww | grep 'xray run -confdir run' | egrep -v 'grep|sudo' | awk '{print $1}'` > /dev/null 2>&1
+	sudo kill -9 `ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{print $1}'` > /dev/null 2>&1
 }
 
 restart()
 {
 	chk_sudo
 	stop
-	disable_tun
-	disable_proxy
+	disable_pf
 	create_json
-	enable_$TYPE
 	start
+	if [ "$TYPE" = "fwd" ]; then
+		enable_pf
+	fi
 	check_connect
 }
 
 check_connect()
 {
 	cat conf/run.conf | awk '{print "Connect "$0"."}'
-	STARTED=0
-	for x in `seq 20`; do
-		sleep 0.2
-		cat log/xray.log | grep -v 'Logger started' | grep -q ' started$' && STARTED=1 && break
-	done
-	if [ "$STARTED" != "1" ]; then
-		stop
-		disable_tun
-		disable_proxy
-		echo "Start Fail!!!"
-		cat log/xray.log
-		exit 1
-	fi
+	check_startd_ok
 	if [ "$TYPE" = "proxy" ]; then
 		SOCKS5='--socks5 127.0.0.1:65080'
 	else
@@ -581,6 +569,23 @@ update()
 	done
 }
 
+help()
+{
+	cat << HELP
+$0 {start|stop|restart|config|subscribe|update} [tun|fwd|proxy]
+start		Start sing-box.
+stop		Stop sing-box
+restart		Restart Sing-box
+config		Set to use nodes, but set multiple at the same time.
+subscribe	Subscribe
+update		Upgrade sing-box,or update geoip and geosite.
+Optional:
+	tun		Use routing mode to forward user data. (Warning:Destroying local routing)
+	fwd		Use PF firewall mode to forward user data.
+	proxy	Using system proxy.
+HELP
+}
+
 ERROR=0
 if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$ACT" != "" ]; then
 	echo "No found \"sing-box\"!!!"
@@ -590,32 +595,34 @@ fi
 if [ "$TYPE" == "" ]; then
 	TYPE=tun
 fi
-if [ "$TYPE" == "proxy" ]; then
-	_tun_ip6='::1'
+if [ "$TYPE" != "tun" ] && [ "$TYPE" != "fwd" ] && [ "$TYPE" != "proxy" ]; then
+	help
+	exit 1
 fi
 case $ACT in
 	start)
 		check_run
 		chk_sudo
 		create_json
-		enable_$TYPE
 		start
-		sleep 1
+		if [ "$TYPE" = "fwd" ]; then
+			enable_pf
+		fi
 		check_connect
-		export TYPE && ./xray_daemons &
+		#export TYPE && ./sbox_daemons &
 	;;
 	stop)
 		chk_sudo
-		./xray_daemons stop
+		#./sbox_daemons stop
 		stop
-		disable_tun
-		disable_proxy
+		disable_pf
+		#disable_proxy
 	;;
 	restart)
 		restart
-		export TYPE && ./xray_daemons &
+		#export TYPE && ./sbox_daemons &
 	;;
-	config|auto)
+	config)
 		config
 	;;
 	subscribe)
@@ -625,7 +632,6 @@ case $ACT in
 		update
 	;;
 	*)
-		cat << HELP
-$0 {start|stop|restart|auto|config|subscribe|update} [proxy|tun]
-HELP
+		help
+	;;
 esac

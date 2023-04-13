@@ -29,18 +29,53 @@ Optional:
 ```
 ## 使用范例：
 ```
-    订阅节点：
-    ./sboxctl subscribe 'https://www.xxx.com/xxx?xxxxxx'
-    Skip certificate validation:false,true[false]
-    Get https://www.xxx.com/xxx?xxxxxx data...done.
-    Convert subscribe to sing-box:
-    Create x.x.x.1_VLESS_VS.sbox...done.
-    Create x.x.x.2_VLESS_VS.sbox...done.
-    Create x.x.x.3_VLESS_VS.sbox...done.
+订阅节点：
+% ./sboxctl subscribe 'https://www.xxx.com/xxx?xxxxxx'
+Skip certificate validation:false,true[false]
+Get https://www.xxx.com/xxx?xxxxxx data...done.
+Convert subscribe to sing-box:
+Create x.x.x.1_VLESS_VS.sbox...done.
+Create x.x.x.2_VLESS_VS.sbox...done.
+Create x.x.x.3_VLESS_VS.sbox...done.
+```
+```
+手动新建节点：
+% ./sboxctl config
+     0  new
+     1  x.x.x.1-VLESS_VS
+     2  x.x.x.2_IPv6-VLESS_VS
+     3  x.x.x.3-VLESS_VS
+Please select configuration file,Multiple separated by spaces,99 is all,DEL for delete node.
+Example_1:1      -> select 1.
+Example_2:1,3,5  -> select 1,3,5.
+Example_3:99     -> select all.
+Please input:[0]0
+     1  vless.xtls-rprx-vision.reality
+     2  vless.xtls-rprx-vision.tls
+Please select the type of connection you want to create:2
+Please enter a node name:23.23.23.23-KR
+address:23.23.23.23
+port:7003
+id:952hff7-3c82-4ec4-458b-b0dfgh59cf2
+security:[tls,reality]tls
+sni:vr.xxx.com
+fingerprint:[chrome,firefox,edge,safari,360,qq,ios,android,random,randomized]random
+Skip certificate validation:[false,true]
+#### Creating Connection Nodes 23.23.23.23-KR ####
+protocol=vless
+address=23.23.23.23
+port=7003
+flow=xtls-rprx-vision
+id=952hff7-3c82-4ec4-458b-b0dfgh59cf2
+security=tls
+sni=vr.xxx.com
+serverName=vr.xxx.com
+fp=random
+allowInsecure=false
 ```
 ```
     选择节点：
-./sboxctl config    
+% ./sboxctl config    
      0  new
      1  x.x.x.1-VLESS_VS
      2  xxx::2_IPv6-VLESS_VS
@@ -53,7 +88,7 @@ Please input:[0]1 3    <--这里选择了1和3两个节点
 ```
 ```
     启动服务：
-./sboxctl start fwd    <---这里以PF防火墙转发模式启动
+% ./sboxctl start fwd    <---这里以PF防火墙转发模式启动
 Please input sudo password:
 Connect x.x.x.1-VLESS_VS.
 Connect x.x.x.3-VLESS_VS.

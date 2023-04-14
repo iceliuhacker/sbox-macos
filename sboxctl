@@ -575,7 +575,7 @@ update()
 	done
 	echo "Do you restart sing-box?[Y/n]" | awk '{printf $0}'
 	read CON
-	echo $CON | egrep -q -i 'no|n' && restart
+	echo $CON | egrep -q -i 'no|n' || restart
 }
 
 help()

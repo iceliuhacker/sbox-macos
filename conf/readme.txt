@@ -1,0 +1,1 @@
+第一次使用，推荐复制dns.conf.default和route.conf.default为dns.conf和route.conf，并根据需求编辑它们的内容。For the first time using, it is recommended to copy dns. conf. default and route. conf. default as dns. conf and route. conf, and edit their content as needed.

@@ -19,7 +19,7 @@ chk_sudo()
 	sudo sysctl net.inet6.ip6.forwarding=1 > /dev/null
 }
 
-create_conf()
+create_node()
 {
 	ls tpl/*.input.tpl 2>/dev/null | sed -e 's/^tpl\///' -e 's/.input.tpl$//' | cat -n 
 	echo "Please select the type of connection you want to create:" | awk '{printf $0}'
@@ -98,7 +98,7 @@ EOF
 		TPL_NUMBER=0
 	fi
 	if [ "$TPL_NUMBER" = "0" ]; then
-		create_conf
+		create_node
 		exit 0
 	fi
 	if [ "$TPL_NUMBER" = "99" ]; then
@@ -109,12 +109,10 @@ EOF
 	fi
 	DEST_LIST=`cat conf/run.conf`
 	if [ "$DEST_LIST" = "" ]; then
-		create_conf
+		create_node
 	fi
 	PID=`ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{printf $1}'`
 	if [ "$PID" != "" ]; then
-		#chk_sudo
-		#sudo pfctl -sr 2>/dev/null | grep -q '^pass out quick route-to ' && TYPE=tun || TYPE=proxy
 		restart
 	else
 		create_json
@@ -123,17 +121,27 @@ EOF
 
 create_json()
 {
+	ls db/*.sbox >/dev/null 2>&1 || config
+	RUN_COUNT=`cat conf/run.conf | wc -l | awk '{printf $1}'`
+	if [ "$RUN_COUNT" -lt "1" ]; then
+		config
+	fi
+	if [ ! -f conf/dns.conf ]; then
+		cp conf/dns.conf.default conf/dns.conf
+	fi
+	if [ ! -f conf/route.conf ]; then
+		cp conf/route.conf.default conf/route.conf
+	fi
 	mkdir -p run
 	#创建主配置
 	rm -f run/*.json
-	RUN_COUNT=`cat conf/run.conf | wc -l | awk '{printf $1}'`
 	DEST_RULE_LIST=''
 	RUN_CONF=`cat conf/run.conf`
 	for XCONF in $RUN_CONF; do
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"
-			exit
+			config
 		fi
 		if [ -z $network ]; then
 			network=tcp
@@ -336,14 +344,12 @@ EOF
 	sudo pfctl -e > /dev/null 2>&1
 	sudo pfctl -f conf/pf.rules > /dev/null 2>&1 || (echo "PF firewall load Fail!!!"; sudo pfctl -f conf/pf.rules; exit 1) || exit 1
 	sudo killall -HUP mDNSResponder 2>&1
-	#enable_proxy
 }
 
 disable_pf()
 {
 	sudo pfctl -dF all > /dev/null 2>&1
 	sudo killall -HUP mDNSResponder 2>&1
-	#disable_proxy
 }
 
 enable_proxy()
@@ -411,6 +417,9 @@ stop()
 restart()
 {
 	chk_sudo
+	[ "$TYPE" = "" ] && sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' && TYPE=fwd
+	[ "$TYPE" = "" ] && ifconfig | grep -q '100:100:100:100' && TYPE=tun
+	[ "$TYPE" = "" ] && ifconfig | grep -q '100:100:100:100' || sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' || TYPE=proxy
 	stop
 	disable_pf
 	create_json
@@ -498,7 +507,7 @@ update()
 	if [ -z $PID ]; then
 		SOCKS5=''
 	fi
-	./sing-box version
+	./sing-box version 2>/dev/null
 	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
 	NEW_VERSION=`curl -sSL https://api.github.com/repos/SagerNet/sing-box/tags | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
 	if [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
@@ -516,6 +525,7 @@ update()
 			if [ -f sing-box.tar.gz ]; then
 				echo "Upgrade sing-box..." | awk '{printf $0}'
 				tar xzf sing-box.tar.gz
+				mv sing-box sing-box.old
 				find . -name sing-box -exec mv {} ./ \;
 				chmod 755 sing-box
 				rm -rf sing-box.tar.gz sing-box-${NEW_VERSION}-*
@@ -568,6 +578,9 @@ update()
 			echo "$DAT.db: Not new data."
 		fi
 	done
+	echo "Do you restart sing-box?[Y/n]" | awk '{printf $0}'
+	read CON
+	echo $CON | egrep -q -i 'no|n' && restart
 }
 
 help()
@@ -593,16 +606,15 @@ if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$AC
 	echo "No found \"sing-box\"!!!"
 	update
 fi
-
-if [ "$TYPE" == "" ]; then
-	TYPE=tun
-fi
 if [ "$ACT" != "subscribe" ] && [ "$TYPE" != "" ] && [ "$TYPE" != "tun" ] && [ "$TYPE" != "fwd" ] && [ "$TYPE" != "proxy" ]; then
 	help
 	exit 1
 fi
 case $ACT in
 	start)
+		if [ "$TYPE" == "" ]; then
+			TYPE=tun
+		fi
 		check_run
 		chk_sudo
 		create_json
@@ -618,7 +630,6 @@ case $ACT in
 		#./sbox_daemons stop
 		stop
 		disable_pf
-		#disable_proxy
 	;;
 	restart)
 		restart

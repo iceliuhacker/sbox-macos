@@ -422,6 +422,7 @@ restart()
 		enable_pf
 	fi
 	check_connect
+	echo "***Restart by $TYPE mode***"
 }
 
 check_connect()
@@ -635,7 +636,6 @@ case $ACT in
 	;;
 	restart)
 		restart
-		echo "***Restart by $TYPE mode***"
 		#export TYPE && ./sbox_daemons &
 	;;
 	config)

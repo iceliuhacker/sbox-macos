@@ -126,12 +126,7 @@ create_json()
 	if [ "$RUN_COUNT" -lt "1" ]; then
 		config
 	fi
-	if [ ! -f conf/dns.conf ]; then
-		cp conf/dns.conf.default conf/dns.conf
-	fi
-	if [ ! -f conf/route.conf ]; then
-		cp conf/route.conf.default conf/route.conf
-	fi
+
 	mkdir -p run
 	#创建主配置
 	rm -f run/*.json
@@ -601,7 +596,14 @@ Optional:
 HELP
 }
 
-ERROR=0
+
+if [ ! -f conf/dns.conf ]; then
+	cp conf/dns.conf.default conf/dns.conf
+fi
+if [ ! -f conf/route.conf ]; then
+	cp conf/route.conf.default conf/route.conf
+fi
+
 if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$ACT" != "" ]; then
 	echo "No found \"sing-box\"!!!"
 	update

@@ -387,8 +387,6 @@ check_startd_ok()
 	done
 	if [ "$STARTED" != "1" ]; then
 		stop
-		#disable_tun
-		#disable_proxy
 		disable_pf
 		echo "Start Fail!!!"
 		cat log/sing-box.log
@@ -412,6 +410,7 @@ stop()
 restart()
 {
 	chk_sudo
+	[ "$TYPE" = "" ] && ( ps axwww | grep -v grep | grep -q 'sing-box run -C run' || exit 0 ) && TYPE=tun
 	[ "$TYPE" = "" ] && sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' && TYPE=fwd
 	[ "$TYPE" = "" ] && ifconfig | grep -q '100:100:100:100' && TYPE=tun
 	[ "$TYPE" = "" ] && (ifconfig | grep -q '100:100:100:100' || sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' || exit 0 ) && TYPE=proxy
@@ -625,6 +624,7 @@ case $ACT in
 			enable_pf
 		fi
 		check_connect
+		echo "***Start by $TYPE mode***"
 		#export TYPE && ./sbox_daemons &
 	;;
 	stop)
@@ -635,6 +635,7 @@ case $ACT in
 	;;
 	restart)
 		restart
+		echo "***Restart by $TYPE mode***"
 		#export TYPE && ./sbox_daemons &
 	;;
 	config)

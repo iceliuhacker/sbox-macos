@@ -414,7 +414,7 @@ restart()
 	chk_sudo
 	[ "$TYPE" = "" ] && sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' && TYPE=fwd
 	[ "$TYPE" = "" ] && ifconfig | grep -q '100:100:100:100' && TYPE=tun
-	[ "$TYPE" = "" ] && ifconfig | grep -q '100:100:100:100' || sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' || TYPE=proxy
+	[ "$TYPE" = "" ] && (ifconfig | grep -q '100:100:100:100' || sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' || exit 0 ) && TYPE=proxy
 	stop
 	disable_pf
 	create_json

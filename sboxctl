@@ -1,8 +1,11 @@
 #!/bin/bash
 
 
-_skip_net='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,240.0.0.0/4,0.0.0.0/8,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24'
-_skip_net6='::1/128,fc00::/7,fe80::/10'
+#from:https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
+PRIVATE_IPV4='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,169.254.0.0/16,240.0.0.0/4,0.0.0.0/8,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24'
+#from:https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
+PRIVATE_IPV6='fc00::/7,fe80::/10,0000::8,0100::/8,0200::7,0400::/6,0800::/5,1000::/4,2000::/3,4000::/3,6000::/3,8000::/3,a000::/3,c000::/3,e000::/4,f000::/5,f800::/6,fe00::/8,fec0::/10,ff00::/8'
+
 CHK_LIST='www.google.com twitter.com www.facebook.com www.baidu.com www.sohu.com'
 _tun_ip=100.100.100.100
 _tun_ip6='fd00::100:100:100:100'
@@ -249,6 +252,13 @@ EOF
 EOF
 
 	#创建路由规则
+	rm -f run/route_ipv4.direct run/route_ipv6.direct run/route_ipv4.fwd run/route_ipv6.fwd
+	#导入route.conf里的IP到防火墙
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="UP_LINK")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' >> run/route_ipv4.fwd
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="UP_LINK")) print $2}' | tr -s ',' '\n' | grep ':' | awk '{printf ","$1}' >> run/route_ipv6.fwd
+	
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' >> run/route_ipv4.direct
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep ':' | awk '{printf ","$1}' >> run/route_ipv6.direct
 	cat << EOF >> run/300_route.json
 {
     "route": {
@@ -278,6 +288,10 @@ EOF
                 "outbound": "$HOST_ACT"
             },
 EOF
+		if [ "$HOST_TYPE" = "geoip" ] && [ "$HOST_ACT" = "direct" ]; then
+			echo $HOST_LIST | tr -s ',"' '\n' | grep -q '^private$' && echo ","$PRIVATE_IPV4 >> run/route_ipv4.direct && echo ","$PRIVATE_IPV6 >> run/route_ipv6.direct
+			echo $HOST_LIST | tr -s ',"' '\n' | grep -q '^cn$' && cat conf/cn_ipv4.txt >> run/route_ipv4.direct && cat conf/cn_ipv6.txt >> run/route_ipv6.direct
+		fi
 	done
 	sed -i '' '$s/},/}/' run/300_route.json
 	cat << EOF >> run/300_route.json
@@ -285,6 +299,8 @@ EOF
     }
 }
 EOF
+
+	#其他出规则
 	cat << EOF >> run/900_outbounds.json
 {
     "outbounds": [
@@ -309,24 +325,39 @@ enable_pf()
 {
 	check_startd_ok
 	ME=`whoami`
-	if [ -f conf/my_ipv4.txt ]; then
-		_skip_net="$_skip_net"`cat conf/my_ipv4.txt`
+	_first_fwd_ipv4='8.8.8.8' _first_fwd_ipv6='2001:4860:4860::8888'
+	if [ -f run/route_ipv4.fwd ]; then
+		_first_fwd_ipv4=$_first_fwd_ipv4`cat run/route_ipv4.fwd | tr -d '\r\n'`
 	fi
-	if [ -f conf/my_ipv6.txt ]; then
-		_skip_net6="$_skip_net6"`cat conf/my_ipv6.txt`
+	if [ -f run/route_ipv6.direct ]; then
+		_first_fwd_ipv6=$_first_fwd_ipv6`cat run/route_ipv6.fwd | tr -d '\r\n'`
 	fi
-	if [ -f conf/cn_ipv4.txt ]; then
-		_skip_net="$_skip_net"`cat conf/cn_ipv4.txt`
+	
+	_skip_net='127.0.0.0/8' _skip_net6='::1/128'
+	if [ -f run/route_ipv4.direct ]; then
+		_skip_net=$_skip_net`cat run/route_ipv4.direct | tr -d '\r\n'`
 	fi
-	if [ -f conf/cn_ipv6.txt ]; then
-		_skip_net6="$_skip_net6"`cat conf/cn_ipv6.txt`
+	if [ -f run/route_ipv6.direct ]; then
+		_skip_net6=$_skip_net6`cat run/route_ipv6.direct | tr -d '\r\n'`
 	fi
 	TUN_IF=`netstat -f inet -rn | awk '{if ($1=="'$_tun_ip'") printf $4}'`
-	cat << EOF > conf/pf.rules
+	cat << EOF > run/pf.rules
 table <skip_net> { $_skip_net }
+
 table <skip_net6> { $_skip_net6 }
 
 `echo "${DEST_RULE_LIST}" | tr ',' '\n' | awk -F':' '{if (NF>1) {sub(/ inet /," inet6 ");print $0;} else print $1}'`
+
+`(
+	if [ "$_first_fwd_ipv4" != "" ]; then
+		echo "table <first_fwd_ipv4> {$_first_fwd_ipv4}"
+		echo "pass out quick route-to ($TUN_IF $_tun_ip) inet from any to <first_fwd_ipv4> user = $ME"
+	fi
+	if [ "$_first_fwd_ipv6" != "" ]; then
+		echo "table <first_fwd_ipv6> {$_first_fwd_ipv6}"
+		echo "pass out quick route-to ($TUN_IF $_tun_ip) inet from any to <first_fwd_ipv6> user = $ME"
+	fi
+)`
 
 pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
 pass out quick route-to ($TUN_IF $_tun_ip) inet from any to ! <skip_net> user = $ME
@@ -337,7 +368,7 @@ pass out quick route-to ($TUN_IF $_tun_ip6) inet6 from any to ! <skip_net6> user
 #pass out quick all
 EOF
 	sudo pfctl -e > /dev/null 2>&1
-	sudo pfctl -f conf/pf.rules > /dev/null 2>&1 || (echo "PF firewall load Fail!!!"; sudo pfctl -f conf/pf.rules; exit 1) || exit 1
+	sudo pfctl -f run/pf.rules > /dev/null 2>&1 || (echo "PF firewall rule \"run/pf.rules\" load Fail!!!"; sudo pfctl -f run/pf.rules; exit 1) || exit 1
 	sudo killall -HUP mDNSResponder 2>&1
 }
 
@@ -551,9 +582,6 @@ update()
 		rm -f tpl/cncidr.txt.new
 		echo "cncidr: Not new data."
 	fi
-	#导入route.conf里的IP到防火墙
-	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' > conf/my_ipv4.txt
-	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep ':' | grep -v 'geo' | awk '{printf ","$1}' > conf/my_ipv6.txt
 
 	# 更新geo数据
 	DAT_LIST='geoip geosite'

@@ -551,6 +551,7 @@ update()
 			if [ -f sing-box.tar.gz ]; then
 				echo "Upgrade sing-box..." | awk '{printf $0}'
 				tar xzf sing-box.tar.gz
+				touch sing-box
 				mv sing-box sing-box.old
 				find . -name sing-box -exec mv {} ./ \;
 				chmod 755 sing-box

@@ -369,13 +369,15 @@ pass out quick route-to ($TUN_IF $_tun_ip6) inet6 from any to ! <skip_net6> user
 EOF
 	sudo pfctl -e > /dev/null 2>&1
 	sudo pfctl -f run/pf.rules > /dev/null 2>&1 || (echo "PF firewall rule \"run/pf.rules\" load Fail!!!"; sudo pfctl -f run/pf.rules; exit 1) || exit 1
-	sudo killall -HUP mDNSResponder 2>&1
+	dscacheutil -flushcache 2>&1
+	sudo dscacheutil -flushcache 2>&1
 }
 
 disable_pf()
 {
 	sudo pfctl -dF all > /dev/null 2>&1
-	sudo killall -HUP mDNSResponder 2>&1
+	dscacheutil -flushcache 2>&1
+	sudo dscacheutil -flushcache 2>&1
 }
 
 enable_proxy()

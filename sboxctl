@@ -634,6 +634,7 @@ fi
 if [ ! -f conf/route.conf ]; then
 	cp conf/route.conf.default conf/route.conf
 fi
+touch conf/run.conf
 
 if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$ACT" != "" ]; then
 	echo "No found \"sing-box\"!!!"

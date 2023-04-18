@@ -228,6 +228,7 @@ create_json()
 	cat << EOF >> run/200_dns.json
 {
     "dns": {
+        "disable_cache": false,
         "servers": [
 EOF
 	grep 'nameserver=' conf/dns.conf \

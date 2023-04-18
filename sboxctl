@@ -153,6 +153,10 @@ create_json()
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			JCON=1
 		fi
+		if [ "$JCON" != "1" ] && [ "$protocol" = "socks" ]; then
+			TPL=tpl/$protocol.json.tpl
+			JCON=1
+		fi
 
 		if [ "$JCON" = "0" ]; then
 			echo "Error sing-box date \"$XCONF\"!!"
@@ -178,6 +182,8 @@ create_json()
 						-e "s/_allowInsecure_/${allowInsecure}/g" \
 						-e "s/_publicKey_/${publicKey}/g" \
 						-e "s/_shortId_/${shortId}/g" \
+						-e "s/_username_/${username}/g" \
+						-e "s/_password_/${password}/g" \
 						> run/600_$XCONF.json
 	done
 

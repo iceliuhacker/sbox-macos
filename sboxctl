@@ -144,6 +144,8 @@ create_json()
 		if [ "$ACTIVE" = "no" ]; then
 			RUN_COUNT=`expr $RUN_COUNT - 1`
 			echo "$XCONF backup."
+		else
+			echo "$XCONF active."
 		fi
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"

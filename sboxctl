@@ -140,6 +140,10 @@ create_json()
 	RUN_CONF=`cat conf/run.conf`
 	for XCONF in $RUN_CONF; do
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
+		if [ "$ACTIVE" = "no" ]; then
+			RUN_COUNT=`expr $RUN_COUNT - 1`
+			echo "$XCONF backup."
+		fi
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"
 			config

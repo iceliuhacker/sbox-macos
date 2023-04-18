@@ -8,6 +8,9 @@
 #特定域名直连
 domain_suffix=cip.cc=direct
 
+#去广告
+#geosite=category-ads-all=block
+
 #中国网络直连
 geosite=cn,apple=direct
 geoip=cn,private=direct

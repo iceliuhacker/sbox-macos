@@ -139,6 +139,7 @@ create_json()
 	DEST_RULE_LIST=''
 	RUN_CONF=`cat conf/run.conf`
 	for XCONF in $RUN_CONF; do
+		ACTIVE=''
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
 		if [ "$ACTIVE" = "no" ]; then
 			RUN_COUNT=`expr $RUN_COUNT - 1`
@@ -177,8 +178,9 @@ create_json()
 			TAG=''
 		fi
 		CONF_NUMBER=600
-		if [ "$ACTIVE" = "no" ] && [ "$RUN_COUNT" -gt "1" ]; then
+		if [ "$ACTIVE" = "no" ]; then
 			CONF_NUMBER=700
+			TAG="-${XCONF}"
 		fi
 		cat $TPL | sed -e "s/_TAG_/${TAG}/g" \
 						-e "s/_protocol_/${protocol}/g" \

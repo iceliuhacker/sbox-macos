@@ -82,7 +82,7 @@ create_node()
 	done
 	echo "Activate?[Y/n]" | awk '{printf $0}'
 	read ACTIVE
-	echo $ACTIVE | egrep -q -i '^no$|^n$' && echo "${ACTIVE}=no" >> db/$CONF_FILE.sbox
+	echo $ACTIVE | egrep -q -i '^no$|^n$' && echo "ACTIVE=no" >> db/$CONF_FILE.sbox
 	echo "#### Creating Connection Nodes $CONF_FILE ####"
 	cat db/$CONF_FILE.sbox
 }

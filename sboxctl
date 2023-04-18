@@ -80,6 +80,9 @@ create_node()
 		echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
 		export ${VAR_NAME}=${TMP_VAR}
 	done
+	echo "Activate?[Y/n]" | awk '{printf $0}'
+	read ACTIVE
+	echo $ACTIVE | egrep -q -i '^no$|^n$' && echo "${ACTIVE}=no" >> db/$CONF_FILE.sbox
 	echo "#### Creating Connection Nodes $CONF_FILE ####"
 	cat db/$CONF_FILE.sbox
 }
@@ -131,8 +134,8 @@ create_json()
 	fi
 
 	mkdir -p run
-	#创建主配置
 	rm -f run/*.json
+	#创建节点配置
 	DEST_RULE_LIST=''
 	RUN_CONF=`cat conf/run.conf`
 	for XCONF in $RUN_CONF; do
@@ -169,6 +172,10 @@ create_json()
 		else
 			TAG=''
 		fi
+		CONF_NUMBER=600
+		if [ "$ACTIVE" = "no" ] && [ "$RUN_COUNT" -gt "1" ]; then
+			CONF_NUMBER=700
+		fi
 		cat $TPL | sed -e "s/_TAG_/${TAG}/g" \
 						-e "s/_protocol_/${protocol}/g" \
 						-e "s/_address_/${address}/g" \
@@ -184,15 +191,20 @@ create_json()
 						-e "s/_shortId_/${shortId}/g" \
 						-e "s/_username_/${username}/g" \
 						-e "s/_password_/${password}/g" \
-						> run/600_$XCONF.json
+						> run/${CONF_NUMBER}_$XCONF.json
 	done
 
+	#创建自动选择及冗余配置
 	if [ "$RUN_COUNT" -gt "1" ]; then
-		TAG_LIST=`cat conf/run.conf | awk '{printf "UP_LINK-"$1"\",\""}' | sed 's/","$//'`
+		#TAG_LIST=`cat conf/run.conf | awk '{printf "UP_LINK-"$1"\",\""}' | sed 's/","$//'`
+		TAG_LIST=`cat run/600_*.json | grep UP_LINK | awk -F'"' '{printf $4"\",\""}' | sed 's/","$//'`
 		cat tpl/selector.json.tpl | sed -e "s/_TAG_LIST_/${TAG_LIST}/g" > run/610_selector.json
 	fi
-	
+
+	#创建主配置
 	cat tpl/main.json.tpl > run/000_main.json
+	
+	#创建tun配置
 	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
 		if [ "$TYPE" = "fwd" ]; then
 			GDNS='"8.8.8.8/32"'

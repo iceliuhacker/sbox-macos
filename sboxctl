@@ -653,9 +653,14 @@ update()
 
 print_conf()
 {
-	cat << EOF
+	if [ "$TYPE" = "mac" ]; then
+		SYS_PROXY=true
+	else
+		SYS_PROXY=false
+	fi
+	cat << EOF | sed "s/\"set_system_proxy\": \(.*\)/\"set_system_proxy\": $SYS_PROXY/"
 {
-`./sing-box format -C run | egrep -v '^/|^{|^}' | sed -e 's/^  }$/  },/' -e 's/^  \]$/  \],/' -e '/^$/d' | sed '$s/^  ],/  ]/'`
+`./sing-box format -C run | egrep -v '^/|^{|^}' | sed -e 's/^  }$/  },/' -e 's/^  \]$/  \],/' -e '/^$/d' | sed '$s/^  ],/  ]/' | awk '{printf $0"|"}' | sed -e 's/}|  \],|  "inbounds": \[/},|/g' -e 's/}|  \],|  "outbounds": \[|/},|/g' | tr -s '|' '\n'`
 }
 EOF
 }

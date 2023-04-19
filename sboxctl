@@ -440,6 +440,8 @@ disable_proxy()
 		while read ETH; do
 			networksetup -setsocksfirewallproxy "$ETH" "" ""
 			networksetup -setsocksfirewallproxystate "$ETH" off
+			networksetup -setwebproxystate "$ETH" off
+			networksetup -setsecurewebproxystate "$ETH" off
 			#networksetup -setv6automatic "$ETH"
 		done
 }
@@ -481,6 +483,7 @@ start()
 stop()
 {
 	sudo kill -9 `ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{print $1}'` > /dev/null 2>&1
+	disable_proxy
 }
 
 restart()

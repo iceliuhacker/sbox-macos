@@ -632,16 +632,26 @@ update()
 	echo $CON | egrep -q -i 'no|n' || restart
 }
 
+print_conf()
+{
+	cat << EOF
+{
+`./sing-box format -C run | egrep -v '^/|^{|^}' | sed -e 's/^  }$/  },/' -e 's/^  \]$/  \],/' -e '/^$/d' | sed '$s/^  ],/  ]/'`
+}
+EOF
+}
+
 help()
 {
 	cat << HELP
-$0 {start|stop|restart|config|subscribe|update} [tun|fwd|proxy|URL]
+$0 {start|stop|restart|config|subscribe|update|print} [tun|fwd|proxy|URL]
 start		Start sing-box.
-stop		Stop sing-box
-restart		Restart Sing-box
+stop		Stop sing-box.
+restart		Restart Sing-box.
 config		Set to use nodes, but set multiple at the same time.
-subscribe	Subscribe
+subscribe	Subscribe.
 update		Upgrade sing-box,or update geoip and geosite.
+print		Print Configuration.
 Optional:
 	tun		Use routing mode to forward user data. (Warning:Destroying local routing)
 	fwd		Use PF firewall mode to forward user data.
@@ -701,6 +711,9 @@ case $ACT in
 	;;
 	update)
 		update
+	;;
+	print)
+		print_conf
 	;;
 	*)
 		help

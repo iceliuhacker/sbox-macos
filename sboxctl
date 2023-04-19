@@ -87,6 +87,23 @@ create_node()
 	cat db/$CONF_FILE.sbox
 }
 
+set_active()
+{
+	NODE_LIST=`echo $TPL_NUMBER | tr -s ' ,' '\n' | grep ':'`
+	for NODE in $NODE_LIST; do
+		LINE=`echo $NODE | awk -F':' '{printf $1}'`
+		READY=`echo $NODE | awk -F':' '{printf $2}'`
+		NODE_NAME=`ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n ${LINE}p`
+		sed -i '' -e '/ACTIVE=/d' -e '/^$/d' db/$NODE_NAME.sbox
+		if [ "$READY" = "r" ]; then
+			echo "ACTIVE=no" | awk '{print "\n"$0}' >> db/$NODE_NAME.sbox
+			echo "$NODE_NAME ready."
+		else
+			echo "$NODE_NAME alive."
+		fi
+	done
+	exit
+}
 config()
 {
 	mkdir -p db
@@ -94,9 +111,10 @@ config()
 	ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | cat -n
 cat << EOF
 Please select configuration file,Multiple separated by spaces,99 is all,DEL for delete node.
-Example_1:1      -> select 1.
-Example_2:1,3,5  -> select 1,3,5.
-Example_3:99     -> select all.
+Example_1: 1        -> select 1.
+Example_2: 1,3,5    -> select 1,3,5.
+Example_3: 99       -> select all.
+Example_4: 2:r 5:a  -> set 2 ready,set 5 alive.
 EOF
 	echo "Please input:[0]" | awk '{printf $0}'
 	read TPL_NUMBER
@@ -107,6 +125,7 @@ EOF
 		create_node
 		exit 0
 	fi
+	echo $TPL_NUMBER | grep -q ':' && set_active
 	if [ "$TPL_NUMBER" = "99" ]; then
 		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n 1,99p > conf/run.conf
 	else
@@ -143,9 +162,9 @@ create_json()
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
 		if [ "$ACTIVE" = "no" ]; then
 			RUN_COUNT=`expr $RUN_COUNT - 1`
-			echo "$XCONF backup."
+			echo "$XCONF ready."
 		else
-			echo "$XCONF active."
+			echo "$XCONF alive."
 		fi
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"

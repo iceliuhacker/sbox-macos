@@ -2,6 +2,7 @@
     "inbounds": [
         {
             "type": "tun",
+            "stack": "system",
             "inet4_address": "_tun_ip_/30",
             "inet6_address": "_tun_ip6_/126",
             "mtu": 9000,

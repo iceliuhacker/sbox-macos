@@ -719,17 +719,14 @@ case $ACT in
 		fi
 		check_connect
 		echo "*** Start by $TYPE mode ***"
-		#export TYPE && ./sbox_daemons &
 	;;
 	stop)
 		chk_sudo
-		#./sbox_daemons stop
 		stop
 		disable_pf
 	;;
 	restart)
 		restart
-		#export TYPE && ./sbox_daemons &
 	;;
 	config)
 		if [ "$TYPE" == "" ]; then

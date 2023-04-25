@@ -1,9 +1,10 @@
 # sbox-macos
 ```
 Mac OS下一键使用的sing-box脚本
-目前仅支持：
+目前仅支持outbounds：
 VLESS-XTLS-uTLS-REALITY
 VLESS-XTLS-uTLS-Vision
+socks
 有时间会慢慢增加对接方式。
 ```
 # 使用方法：
@@ -21,6 +22,7 @@ restart         Restart Sing-box
 config          设置使用的节点，如果没有也可以在这里添加，可以设置多个节点，这样将自动从你选择的节点里自动连接，并冗余切换。
 subscribe      从订阅URL里获取节点资源
 update          升级sing-box以及所需要的geoip、geosite文件。
+print           [ios] 输出iOS使用的完整配置文件。
 Optional:
         tun      使用路由模式(警告：将破坏主动访问你的路由)
         fwd      使用PF防火墙转发，如果你已经启用了防火墙建议你不要使用，优点是不破坏路由。

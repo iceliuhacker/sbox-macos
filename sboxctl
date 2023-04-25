@@ -576,14 +576,15 @@ subscribe()
 
 update()
 {
-	ifconfig >/dev/null 2>&1 | grep -q "inet $_tun_ip netmask" && SOCKS5='' || SOCKS5='--socks5 127.0.0.1:65080'
 	PID=`ps axwww | grep 'sing-box run -C run' | grep -v grep | awk '{printf $1}'`
 	if [ -z $PID ]; then
 		SOCKS5=''
+	else
+		SOCKS5='--socks5 127.0.0.1:65080'
 	fi
 	./sing-box version 2>/dev/null
 	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
-	NEW_VERSION=`curl -sSL https://api.github.com/repos/SagerNet/sing-box/tags | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
+	NEW_VERSION=`curl -sSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
 	if [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
 		echo "Have a new version:$NEW_VERSION,do you upgrade?[N/y]" | awk '{printf $0}'
 		read CON
@@ -640,7 +641,7 @@ update()
 		NOW_MD5=`md5 $DAT.db | awk '{printf $NF}'`
 		NEW_MD5=$NOW_MD5
 		echo "Download $URL..." | awk '{printf $0}'
-		curl -skSL -w %{http_code} --retry 3 --connect-timeout 3 $URL -o $DAT.db.new | grep -q '^200$' &&\
+		curl -skSL $SOCKS5 -w %{http_code} --retry 3 --connect-timeout 3 $URL -o $DAT.db.new | grep -q '^200$' &&\
 			NEW_MD5=`md5 $DAT.db.new | awk '{printf $NF}'` && echo "done." || (echo "Fail!!!"; exit 1) || continue
 		if [ "$NEW_MD5" != "$NOW_MD5" ]; then
 			mv $DAT.db $DAT.db.old

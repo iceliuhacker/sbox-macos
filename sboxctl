@@ -104,6 +104,7 @@ set_active()
 	done
 	exit
 }
+
 config()
 {
 	mkdir -p db
@@ -216,13 +217,8 @@ create_json()
 	done
 
 	#创建自动选择及冗余配置
-	if [ "$RUN_COUNT" -gt "1" ]; then
-		#TAG_LIST=`cat conf/run.conf | awk '{printf "UP_LINK-"$1"\",\""}' | sed 's/","$//'`
-		TAG_LIST=`cat run/600_*.json | grep UP_LINK | awk -F'"' '{printf $4"\",\""}' | sed 's/","$//'`
-		cat tpl/selector.json.tpl | sed -e "s/_TAG_LIST_/${TAG_LIST}/g" > run/610_selector.json
-	else
-		sed -i '' 's/"UP_LINK-\(.*\)"/"UP_LINK"/' run/600_*.json
-	fi
+	TAG_LIST=`cat run/600_*.json | grep UP_LINK | awk -F'"' '{printf $4"\",\""}' | sed 's/","$//'`
+	cat tpl/selector.json.tpl | sed -e "s/_TAG_LIST_/${TAG_LIST}/g" > run/610_selector.json
 
 	#创建主配置
 	cat tpl/main.json.tpl > run/000_main.json
@@ -584,8 +580,8 @@ update()
 	fi
 	./sing-box version 2>/dev/null
 	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
-	NEW_VERSION=`curl -sSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
-	if [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
+	NEW_VERSION=`curl -sSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags 2>/dev/null | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
+	if [ ! -z "$NEW_VERSION" ] && [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
 		echo "Have a new version:$NEW_VERSION,do you upgrade?[N/y]" | awk '{printf $0}'
 		read CON
 		if [ "$CON" = "y" ]; then 

@@ -20,5 +20,5 @@ geoip=cn,private=direct
 domain_suffix=ipify.org=UP_LINK
 geosite=geolocation-!cn=UP_LINK
 
-#目标端口规则
-dport=20:21,123=direct
+#目标端口规则，连续端口用“:”隔开。如：20:22,123，就是20-22端口之间和123端口。
+#dport=20:21,123=direct

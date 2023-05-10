@@ -394,13 +394,19 @@ enable_pf()
 	if [ -f run/route_ipv6.direct ]; then
 		_skip_net6=$_skip_net6`cat run/route_ipv6.direct | tr -d '\r\n'`
 	fi
-	TUN_IF=`netstat -f inet -rn | awk '{if ($1=="'$_tun_ip'") printf $4}'`
 	cat << EOF > run/pf.rules
 table <skip_net> { $_skip_net }
 
 table <skip_net6> { $_skip_net6 }
 
 `echo "${DEST_RULE_LIST}" | tr ',' '\n' | awk -F':' '{if (NF>1) {sub(/ inet /," inet6 ");print $0;} else print $1}'`
+
+`cat conf/route.conf | awk -F'=' '{
+	if (($1=="dport") && ($3=="direct")) {
+		print "pass out quick inet proto {tcp,udp} from any to any port {"$2"}";
+		print "pass out quick inet6 proto {tcp,udp} from any to any port {"$2"}";
+	}
+}'`
 
 `(
 	if [ "$_first_fwd_ipv4" != "" ]; then
@@ -468,11 +474,15 @@ check_run()
 
 check_startd_ok()
 {
-	STARTED=0
+	STARTED=0 TUN_IF=
 	for x in `seq 20`; do
 		sleep 0.2
-		ifconfig | grep -q $_tun_ip && STARTED=1 && break
-		netstat -an | grep -q '*.65080' && STARTED=1 && break
+		if [ "$TYPE" = "proxy" ]; then
+			netstat -an | grep -q '*.65080' && STARTED=1 && break
+		else
+			TUN_IF=`netstat -f inet -rn | awk '{if ($1=="'$_tun_ip'") printf $4}'`
+			[ ! -z $TUN_IF ] && STARTED=1 && break
+		fi
 	done
 	if [ "$STARTED" != "1" ]; then
 		stop

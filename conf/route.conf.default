@@ -1,6 +1,6 @@
 #路由规则：
 #类别=数据=动作(direct|UP_LINK)
-#类别：geosite, geoip, domain_suffix, ip
+#类别：geosite, geoip, domain_suffix, ip, port
 #数据：多个用“,”隔开
 #动作：direct(直连),UP_LINK(梯子)
 #注意：UP_LINK优先于direct
@@ -19,3 +19,6 @@ geoip=cn,private=direct
 #ip=8.8.8.8,8.8.4.4,1.1.1.1=UP_LINK
 domain_suffix=ipify.org=UP_LINK
 geosite=geolocation-!cn=UP_LINK
+
+#目标端口规则
+dport=20:21,123=direct

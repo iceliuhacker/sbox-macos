@@ -535,10 +535,10 @@ check_connect()
 		SOCKS5=''
 	fi
 	for A in $CHK_LIST; do
-		curl -sSLI $SOCKS5 --connect-timeout 5 -w "%{http_code}" https://$A/ -o /dev/null | grep -q '^20' && echo "Check $A...OK." || echo "Check $A...Fail!"
+		curl -skSLI $SOCKS5 --connect-timeout 5 -w "%{http_code}" https://$A/ -o /dev/null | grep -q '^20' && echo "Check $A...OK." || echo "Check $A...Fail!"
 	done
-	curl -sSL $SOCKS5 --connect-timeout 5 https://cip.cc/ | awk '{if ($1=="IP") print "Internal IP: "$3" from:https://cip.cc/"}'
-	curl -sSL $SOCKS5 --connect-timeout 5 https://api.ipify.org | awk '{print "GFW outside: "$1" from:https://api.ipify.org/"}'
+	curl -skSL $SOCKS5 --connect-timeout 5 https://cip.cc/ | awk '{if ($1=="IP") print "Internal IP: "$3" from:https://cip.cc/"}'
+	curl -skSL $SOCKS5 --connect-timeout 5 https://api.ipify.org | awk '{print "GFW outside: "$1" from:https://api.ipify.org/"}'
 }
 
 subscribe()
@@ -556,7 +556,7 @@ subscribe()
 	mkdir -p db
 	rm -f db/.subscribe
 	echo "Get $SUB_URL data..." | awk '{printf $0}'
-	curl -sSL --connect-timeout 5 $SUB_URL -o db/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
+	curl -skSL --connect-timeout 5 $SUB_URL -o db/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
 	cat db/.subscribe | grep '^vless://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
 	NODE_LIST=`cat db/.subscribe | grep '^vless://' | awk -F'#' '{if (NF==2) print $NF}'`
 	if [ "$NODE_LIST" = "" ]; then
@@ -605,7 +605,7 @@ update()
 	fi
 	./sing-box version 2>/dev/null
 	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
-	NEW_VERSION=`curl -sSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags 2>/dev/null | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
+	NEW_VERSION=`curl -skSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags 2>/dev/null | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
 	if [ ! -z "$NEW_VERSION" ] && [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
 		echo "Have a new version:$NEW_VERSION,do you upgrade?[N/y]" | awk '{printf $0}'
 		read CON

@@ -183,7 +183,7 @@ create_json()
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			JCON=1
 		fi
-		if [ "$JCON" != "1" ] && [ "$protocol" = "socks" ]; then
+		if [ "$JCON" != "1" ] && [ "$protocol" != "" ] && [ -f tpl/$protocol.json.tpl ]; then
 			TPL=tpl/$protocol.json.tpl
 			JCON=1
 		fi
@@ -213,6 +213,8 @@ create_json()
 						-e "s/_shortId_/${shortId}/g" \
 						-e "s/_username_/${username}/g" \
 						-e "s/_password_/${password}/g" \
+						-e "s@_private_key_path_@${private_key_path}@g" \
+						-e "s@_private_key_passphrase_@${private_key_passphrase}@g" \
 						> run/${CONF_NUMBER}_$XCONF.json
 	done
 

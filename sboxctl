@@ -296,8 +296,8 @@ EOF
 	#创建路由规则
 	rm -f run/route_ipv4.direct run/route_ipv6.direct run/route_ipv4.fwd run/route_ipv6.fwd
 	#导入route.conf里的IP到防火墙
-	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="UP_LINK")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' >> run/route_ipv4.fwd
-	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="UP_LINK")) print $2}' | tr -s ',' '\n' | grep ':' | awk '{printf ","$1}' >> run/route_ipv6.fwd
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3!="direct")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' >> run/route_ipv4.fwd
+	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3!="direct")) print $2}' | tr -s ',' '\n' | grep ':' | awk '{printf ","$1}' >> run/route_ipv6.fwd
 	
 	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep -v ':' | awk '{printf ","$1}' >> run/route_ipv4.direct
 	cat conf/route.conf | awk -F'=' '{if (($1=="ip") && ($3=="direct")) print $2}' | tr -s ',' '\n' | grep ':' | awk '{printf ","$1}' >> run/route_ipv6.direct
@@ -377,6 +377,19 @@ EOF
 	echo "*** Create configuration file of type $TYPE ***"
 }
 
+enable_tun_custom_rt()
+{
+	check_startd_ok
+	CRT4_LIST=`cat run/route_ipv4.fwd | tr -s ',' ' '`
+	for RT in $CRT4_LIST; do
+		sudo route add -ifscope $TUN_IF $RT $_tun_ip > /dev/null
+	done
+	CRT6_LIST=`cat run/route_ipv6.fwd | tr -s ',' ' '`
+	for RT in $CRT6_LIST; do
+		sudo route add -inet6 $RT $_tun_ip6 > /dev/null
+	done
+}
+
 enable_pf()
 {
 	check_startd_ok
@@ -417,7 +430,7 @@ table <skip_net6> { $_skip_net6 }
 	fi
 	if [ "$_first_fwd_ipv6" != "" ]; then
 		echo "table <first_fwd_ipv6> {$_first_fwd_ipv6}"
-		echo "pass out quick route-to ($TUN_IF $_tun_ip6) inet from any to <first_fwd_ipv6> user = $ME"
+		echo "pass out quick route-to ($TUN_IF $_tun_ip6) inet6 from any to <first_fwd_ipv6> user = $ME"
 	fi
 )`
 
@@ -520,6 +533,9 @@ restart()
 	disable_pf
 	create_json
 	start
+	if [ "$TYPE" = "tun" ]; then
+		enable_tun_custom_rt
+	fi
 	if [ "$TYPE" = "fwd" ]; then
 		enable_pf
 	fi
@@ -738,6 +754,9 @@ case $ACT in
 		chk_sudo
 		create_json
 		start
+		if [ "$TYPE" = "tun" ]; then
+			enable_tun_custom_rt
+		fi
 		if [ "$TYPE" = "fwd" ]; then
 			enable_pf
 		fi

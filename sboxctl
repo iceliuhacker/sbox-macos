@@ -417,7 +417,7 @@ table <skip_net6> { $_skip_net6 }
 	fi
 	if [ "$_first_fwd_ipv6" != "" ]; then
 		echo "table <first_fwd_ipv6> {$_first_fwd_ipv6}"
-		echo "pass out quick route-to ($TUN_IF $_tun_ip) inet from any to <first_fwd_ipv6> user = $ME"
+		echo "pass out quick route-to ($TUN_IF $_tun_ip6) inet from any to <first_fwd_ipv6> user = $ME"
 	fi
 )`
 

@@ -77,7 +77,7 @@ create_node()
 
 		echo $VAR_VALUE | awk '{printf $0}'
 		read TMP_VAR
-		echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
+		echo "${VAR_NAME}='${TMP_VAR}'" >> db/$CONF_FILE.sbox
 		export ${VAR_NAME}=${TMP_VAR}
 	done
 	echo "Activate?[Y/n]" | awk '{printf $0}'

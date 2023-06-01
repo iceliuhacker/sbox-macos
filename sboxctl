@@ -258,7 +258,7 @@ EOF
 		for(i=1;i<=LEN;i++) {
 			print "            {";
 			print "                \"tag\": \""DNS[i]"\",";
-			if ($3=="UP_LINK") {
+			if ($3!="direct") {
 				DNS[i]="tcp://"DNS[i];
 				S_strategy="ipv4_only";
 			};

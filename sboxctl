@@ -93,7 +93,7 @@ cat << EOF
 Please select configuration file,Multiple separated by spaces,99 is all,DEL for delete node.
 Example_1: 1        -> select 1.
 Example_2: 1,3,5    -> select 1,3,5.
-Example_3: 99       -> select all.
+Example_3: all       -> select all.
 EOF
 	echo "Please input:[0]" | awk '{printf $0}'
 	read TPL_NUMBER
@@ -104,12 +104,13 @@ EOF
 		create_node
 		exit 0
 	fi
-	if [ "$TPL_NUMBER" = "99" ]; then
-		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n 1,99p > conf/run.conf
+	if [ "$TPL_NUMBER" = "all" ]; then
+		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//'
 		touch conf/bak_run.conf
 	else
-		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' ','`
+		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"p;"}'`
 		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}p" > conf/run.conf
+				TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"d;"}'`
 		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}!p" > conf/bak_run.conf
 	fi
 	DEST_LIST=`cat conf/run.conf`

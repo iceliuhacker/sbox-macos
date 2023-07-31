@@ -287,6 +287,7 @@ EOF
 {
     "route": {
         "auto_detect_interface": true,
+        "final": "UP_LINK",
         "rules": [
             {
                 "port": 53,

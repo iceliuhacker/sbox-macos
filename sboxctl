@@ -358,7 +358,7 @@ EOF
 }
 EOF
 	#创建api接口
-	./sing-box version | grep -q with_clash_api && cat tpl/clash-api.json.tpl >> run/999_clash-api.json
+	./sing-box version | grep -q with_clash_api && cat tpl/clash-api.json.tpl >> run/390_clash-api.json
 	echo "*** Create configuration file of type $TYPE ***"
 }
 

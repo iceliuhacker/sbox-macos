@@ -80,29 +80,8 @@ create_node()
 		echo "${VAR_NAME}='${TMP_VAR}'" >> db/$CONF_FILE.sbox
 		export ${VAR_NAME}=${TMP_VAR}
 	done
-	echo "Activate?[Y/n]" | awk '{printf $0}'
-	read ACTIVE
-	echo $ACTIVE | egrep -q -i '^no$|^n$' && echo "ACTIVE=no" >> db/$CONF_FILE.sbox
 	echo "#### Creating Connection Nodes $CONF_FILE ####"
 	cat db/$CONF_FILE.sbox
-}
-
-set_active()
-{
-	NODE_LIST=`echo $TPL_NUMBER | tr -s ' ,' '\n' | grep ':'`
-	for NODE in $NODE_LIST; do
-		LINE=`echo $NODE | awk -F':' '{printf $1}'`
-		READY=`echo $NODE | awk -F':' '{printf $2}'`
-		NODE_NAME=`ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n ${LINE}p`
-		sed -i '' -e '/ACTIVE=/d' -e '/^$/d' db/$NODE_NAME.sbox
-		if [ "$READY" = "r" ]; then
-			echo "ACTIVE=no" | awk '{print "\n"$0}' >> db/$NODE_NAME.sbox
-			echo "$NODE_NAME ready."
-		else
-			echo "$NODE_NAME alive."
-		fi
-	done
-	exit
 }
 
 config()
@@ -115,7 +94,6 @@ Please select configuration file,Multiple separated by spaces,99 is all,DEL for 
 Example_1: 1        -> select 1.
 Example_2: 1,3,5    -> select 1,3,5.
 Example_3: 99       -> select all.
-Example_4: 2:r 5:a  -> set 2 ready,set 5 alive.
 EOF
 	echo "Please input:[0]" | awk '{printf $0}'
 	read TPL_NUMBER
@@ -126,12 +104,13 @@ EOF
 		create_node
 		exit 0
 	fi
-	echo $TPL_NUMBER | grep -q ':' && set_active
 	if [ "$TPL_NUMBER" = "99" ]; then
 		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n 1,99p > conf/run.conf
+		touch conf/bak_run.conf
 	else
-		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"p;"}'`
-		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}" > conf/run.conf
+		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' ','`
+		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}p" > conf/run.conf
+		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}!p" > conf/bak_run.conf
 	fi
 	DEST_LIST=`cat conf/run.conf`
 	if [ "$DEST_LIST" = "" ]; then
@@ -158,15 +137,11 @@ create_json()
 	#创建节点配置
 	DEST_RULE_LIST=''
 	RUN_CONF=`cat conf/run.conf`
-	for XCONF in $RUN_CONF; do
-		ACTIVE=''
+	BAK_CONF=`awk '{print $1":bak"}' conf/bak_run.conf `
+	for SBOX_DB in $RUN_CONF; do
+		ACTIVE=`echo $SBOX_DB | awk -F':' '{printf $NF}'`
+		XCONF=`echo $SBOX_DB | sed 's/:bak$//'`
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
-		if [ "$ACTIVE" = "no" ]; then
-			RUN_COUNT=`expr $RUN_COUNT - 1`
-			echo "$XCONF ready."
-		else
-			echo "$XCONF alive."
-		fi
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"
 			config
@@ -195,7 +170,7 @@ create_json()
 		DEST_RULE_LIST=$DEST_RULE_LIST`cat db/$XCONF.sbox | grep 'address=' | awk -F'=' '{print "pass out quick inet proto tcp from any to "$2","}'`
 		
 		CONF_NUMBER=600
-		if [ "$ACTIVE" = "no" ]; then
+		if [ "$ACTIVE" = "bak" ]; then
 			CONF_NUMBER=700
 		fi
 		cat $TPL | sed -e "s/_TAG_/-${XCONF}/g" \
@@ -222,6 +197,12 @@ create_json()
 	TAG_LIST=`cat run/600_*.json 2>/dev/null | grep UP_LINK | awk -F'"' '{printf $4"\",\""}' | sed 's/","$//'`
 	if [ ! -z "$TAG_LIST" ]; then
 		cat tpl/urltest.json.tpl | sed -e "s/_TAG_LIST_/${TAG_LIST}/g" > run/610_urltest.json
+	fi
+
+	#创建手动选择配置
+	ALL_LIST=`cat run/600_*.json run/700_*.json 2>/dev/null | grep UP_LINK | awk -F'"' '{printf $4"\",\""}' | sed 's/","$//'`
+	if [ ! -z "$ALL_LIST" ]; then
+		cat tpl/selector.json.tpl | sed -e "s/_ALL_LIST_/${ALL_LIST}/g" > run/710_selector.json
 	fi
 
 	#创建主配置

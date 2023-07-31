@@ -683,7 +683,7 @@ update()
 
 open_api()
 {
-	if [ -f run/999_clash-api.json ]; then
+	if [ -f run/390_clash-api.json ]; then
 		open https://yacd.metacubex.one/
 	fi
 }

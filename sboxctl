@@ -90,7 +90,7 @@ config()
 	echo '     0  new'
 	ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | cat -n
 cat << EOF
-Please select configuration file,Multiple separated by spaces,99 is all,DEL for delete node.
+Please select configuration file,Multiple separated by spaces,all is all,DEL for delete node.
 Example_1: 1        -> select 1.
 Example_2: 1,3,5    -> select 1,3,5.
 Example_3: all       -> select all.

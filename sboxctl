@@ -356,6 +356,8 @@ EOF
     ]
 }
 EOF
+	#创建api接口
+	./sing-box version | grep -q with_clash_api && cat tpl/clash-api.json.tpl >> run/999_clash-api.json
 	echo "*** Create configuration file of type $TYPE ***"
 }
 
@@ -523,6 +525,7 @@ restart()
 	fi
 	check_connect
 	echo "*** Restart by $TYPE mode ***"
+	open_api
 }
 
 check_connect()
@@ -677,6 +680,13 @@ update()
 	echo $CON | egrep -q -i 'no|n' || restart
 }
 
+open_api()
+{
+	if [ -f run/999_clash-api.json ]; then
+		open https://yacd.metacubex.one/
+	fi
+}
+
 print_conf()
 {
 	if [ "$TYPE" = "ios" ]; then
@@ -744,6 +754,7 @@ case $ACT in
 		fi
 		check_connect
 		echo "*** Start by $TYPE mode ***"
+		open_api
 	;;
 	stop)
 		chk_sudo

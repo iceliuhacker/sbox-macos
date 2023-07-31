@@ -110,7 +110,7 @@ EOF
 	else
 		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"p;"}'`
 		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}p" > conf/run.conf
-				TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"d;"}'`
+		TPL_NUMBER=`echo $TPL_NUMBER | tr -s ' ,' '\n' | awk '{printf $1"d;"}'`
 		ls db/*.sbox 2>/dev/null | sed -e 's/^db\///' -e 's/.sbox$//' | sed -n "${TPL_NUMBER}!p" > conf/bak_run.conf
 	fi
 	DEST_LIST=`cat conf/run.conf`

@@ -139,7 +139,7 @@ create_json()
 	DEST_RULE_LIST=''
 	RUN_CONF=`cat conf/run.conf`
 	BAK_CONF=`awk '{print $1":bak"}' conf/bak_run.conf `
-	for SBOX_DB in $RUN_CONF; do
+	for SBOX_DB in $RUN_CONF $BAK_CONF; do
 		ACTIVE=`echo $SBOX_DB | awk -F':' '{printf $NF}'`
 		XCONF=`echo $SBOX_DB | sed 's/:bak$//'`
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`

@@ -12,8 +12,8 @@ domain_suffix=cip.cc=direct
 #geosite=category-ads-all=block
 
 #中国网络直连
-geosite=cn,apple=direct
 geoip=cn,private=direct
+geosite=cn,apple=direct
 
 #国外网络走梯子(内网域名及国内域名不支持UP_LINK，请转换为IP使用ip类型)
 #ip=8.8.8.8,8.8.4.4,1.1.1.1=UP_LINK

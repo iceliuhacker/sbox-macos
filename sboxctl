@@ -229,6 +229,7 @@ create_json()
 	cat << EOF >> run/200_dns.json
 {
     "dns": {
+        "final": "local",
         "disable_cache": false,
         "servers": [
 EOF
@@ -249,9 +250,14 @@ EOF
 			print "                \"detour\": \""$3"\"";
 			print "            },";
 		}
-	}' | sed '$s/},/}/' >> run/200_dns.json
+	}' >> run/200_dns.json
 
 	cat << EOF >> run/200_dns.json
+      {
+        "tag": "local",
+        "address": "local",
+        "detour": "direct"
+      }
         ],
         "rules": [
 EOF
@@ -689,13 +695,18 @@ open_api()
 }
 
 print_conf()
-{
+{	
 	if [ "$TYPE" = "ios" ]; then
 		SYS_PROXY=false
 	else
 		SYS_PROXY=true
 	fi
-	cat << EOF | sed "s/\"set_system_proxy\": \(.*\)/\"set_system_proxy\": $SYS_PROXY/"
+	if [ "$TYPE" = "and" ]; then
+		TUN_DRV=gVisor
+	else
+		TUN_DRV=system
+	fi
+	cat << EOF | sed -e "s/\"set_system_proxy\": \(.*\)/\"set_system_proxy\": $SYS_PROXY/" -e "s/\"stack\": \"system\",/\"stack\": \"$TUN_DRV\",/"
 {
 `./sing-box format -C run | egrep -v '^/|^{|^}' | sed -e 's/^  }$/  },/' -e 's/^  \]$/  \],/' -e '/^$/d' | sed '$s/^  ],/  ]/' | awk '{printf $0"|"}' | sed -e 's/}|  \],|  "inbounds": \[/},|/g' -e 's/}|  \],|  "outbounds": \[|/},|/g' | tr -s '|' '\n'`
 }
@@ -712,7 +723,7 @@ restart		Restart Sing-box.
 config		Set to use nodes, but set multiple at the same time.
 subscribe	Subscribe.
 update		Upgrade sing-box,or update geoip and geosite.
-print		[ios] Print Configuration.
+print		[ios|and] Print Configuration.
 Optional:
 	tun		Use routing mode to forward user data. (Warning:Destroying local routing)
 	fwd		Use PF firewall mode to forward user data.

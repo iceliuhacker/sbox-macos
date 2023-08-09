@@ -6,7 +6,7 @@ PRIVATE_IPV4='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,
 #from:https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
 PRIVATE_IPV6='fc00::/7,fe80::/10,0000::8,0100::/8,0200::7,0400::/6,0800::/5,1000::/4,4000::/3,6000::/3,8000::/3,a000::/3,c000::/3,e000::/4,f000::/5,f800::/6,fe00::/8,fec0::/10,ff00::/8'
 
-CHK_LIST='www.google.com twitter.com www.facebook.com www.baidu.com www.sohu.com'
+CHK_LIST='www.google.com www.youtube.com www.facebook.com www.baidu.com www.sohu.com'
 _tun_ip=100.100.100.100
 _tun_ip6='fd00::100:100:100:100'
 ACT=$1
@@ -547,7 +547,7 @@ check_connect()
 	for A in $CHK_LIST; do
 		curl -skSLI $SOCKS5 --connect-timeout 5 -w "%{http_code}" https://$A/ -o /dev/null | grep -q '^20' && echo "Check $A...OK." || echo "Check $A...Fail!"
 	done
-	curl -skSL $SOCKS5 --connect-timeout 5 https://cip.cc/ | awk '{if ($1=="IP") print "Internal IP: "$3" from:https://cip.cc/"}'
+	curl -skSL $SOCKS5 --connect-timeout 5 http://myip.ipip.net | awk '{print "Internal "$2" from:http://myip.ipip.net/"}'
 	curl -skSL $SOCKS5 --connect-timeout 5 https://api.ipify.org | awk '{print "GFW outside: "$1" from:https://api.ipify.org/"}'
 }
 

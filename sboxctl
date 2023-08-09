@@ -253,11 +253,11 @@ EOF
 	}' >> run/200_dns.json
 
 	cat << EOF >> run/200_dns.json
-      {
-        "tag": "local",
-        "address": "local",
-        "detour": "direct"
-      }
+            {
+                "tag": "local",
+                "address": "local",
+                "detour": "direct"
+            }
         ],
         "rules": [
 EOF

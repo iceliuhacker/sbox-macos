@@ -702,7 +702,7 @@ print_conf()
 		SYS_PROXY=true
 	fi
 	if [ "$TYPE" = "and" ]; then
-		TUN_DRV=gVisor
+		TUN_DRV=gvisor
 	else
 		TUN_DRV=system
 	fi

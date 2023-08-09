@@ -696,7 +696,7 @@ open_api()
 
 print_conf()
 {	
-	if [ "$TYPE" = "ios" ]; then
+	if [ "$TYPE" = "ios" ] || [ "$TYPE" = "and" ]; then
 		SYS_PROXY=false
 	else
 		SYS_PROXY=true

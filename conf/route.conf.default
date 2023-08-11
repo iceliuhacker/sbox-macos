@@ -6,7 +6,7 @@
 #注意：UP_LINK优先于direct
 
 #特定域名直连
-domain_suffix=cip.cc=direct
+domain_suffix=ipip.net=direct
 
 #去广告
 #geosite=category-ads-all=block

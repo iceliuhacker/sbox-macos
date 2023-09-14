@@ -10,6 +10,7 @@
             "password": "_id_", // 与服务端一致
             "tls": {
                 "enabled": true,
+                "insecure": _allowInsecure_,
                 "server_name": "_serverName_",
                 "alpn": [
                     "h3"

@@ -158,7 +158,7 @@ create_json()
 			echo "Not alive node!!!"
 			config
 		fi
-		TPL=tpl/$TRANSFER_TYPE.json.tpl
+
 		if [ -z $network ]; then
 			network=tcp
 		fi
@@ -175,9 +175,6 @@ create_json()
 			TPL=tpl/$protocol.json.tpl
 			JCON=1
 		fi
-		if [ "$JCON" != "1" ] && [ -f tpl/$TRANSFER_TYPE.json.tpl ]; then
-			JCON=1
-		fi
 
 		if [ "$JCON" = "0" ]; then
 			echo "Error sing-box date \"$XCONF\"!!"
@@ -189,6 +186,7 @@ create_json()
 		if [ "$ACTIVE" = "bak" ]; then
 			CONF_NUMBER=700
 		fi
+		NODE_JSON=`./sing-box generate uuid`
 		cat $TPL | sed -e "s/_TAG_/-${XCONF}/g" \
 						-e "s/_protocol_/${protocol}/g" \
 						-e "s/_address_/${address}/g" \
@@ -210,7 +208,7 @@ create_json()
 						-e "s@_down_mbps_@${down_mbps}@g" \
 						-e "s@_congestion_control_@${congestion_control}@g" \
 						-e "s@udp_relay_mode@${_udp_relay_mode_}@g" \
-						> run/${CONF_NUMBER}_$XCONF.json
+						> run/${CONF_NUMBER}_$NODE_JSON.json
 	done
 
 	#创建自动选择及冗余配置
@@ -587,7 +585,8 @@ subscribe()
 	echo "Get $SUB_URL data..." | awk '{printf $0}'
 	curl -skSL --connect-timeout 5 $SUB_URL -o db/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
 	cat db/.subscribe | egrep '^vless://|^hysteria2://|^tuic://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
-	NODE_LIST=`cat db/.subscribe | grep '^vless://' | awk -F'#' '{if (NF==2) print $NF}'`
+	#获取节点名列表
+	NODE_LIST=`cat db/.subscribe | egrep '^vless://|^hysteria2://|^hy2://|^tuic://' | awk -F'#' '{if (NF==2) print $NF}'`
 	if [ "$NODE_LIST" = "" ]; then
 		echo "Error data!!!"
 		exit 1
@@ -599,7 +598,8 @@ subscribe()
 		else
 			SUB_ACT="Create"
 		fi
-		echo -e "protocol=vless\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
+		PROTOCOL=`cat db/.subscribe | awk -F':' '{printf $1}'`
+		echo -e "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
 		echo "$SUB_ACT $NODE.sbox..." | awk '{printf $0}'
 		NODE_INFO=`cat db/.subscribe | grep "#${NODE}$" | sed -e 's@vless://@@' -e "s/#${NODE}$//"`
 		echo $NODE_INFO | tr -s '@?&' '\n' | awk '{

@@ -9,6 +9,7 @@
             "flow": "_flow_",
             "tls": {
                 "enabled": true,
+                "insecure": _allowInsecure_,
                 "server_name": "_serverName_", // 如果"server"填的是服务端的域名，可留空，如果"server"填的是服务端的IP，此处填服务端的证书中包含的域名
                 "utls": {
                     "enabled": true,

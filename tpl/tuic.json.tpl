@@ -11,6 +11,7 @@
             "udp_relay_mode": "_udp_relay_mode_",
             "tls": {
                 "enabled": true,
+                "insecure": _allowInsecure_,
                 "server_name": "_serverName_",
                 "alpn": [
                     "h3"

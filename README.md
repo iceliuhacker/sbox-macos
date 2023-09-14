@@ -4,7 +4,10 @@ Mac OS下一键使用的sing-box脚本
 目前仅支持outbounds：
 VLESS-XTLS-uTLS-REALITY
 VLESS-XTLS-uTLS-Vision
+hysteria2
+tuic
 socks
+ssh
 有时间会慢慢增加对接方式。
 ```
 # 使用方法：

@@ -36,7 +36,7 @@ create_node()
 		echo "Choice error!!!"
 		exit 1
 	fi
-	
+	TRANSFER_TYPE=`echo $TPL | sed -e 's/^tpl\///' -e 's/.input.tpl$//'`
 	echo "Please enter a node name:" | awk '{printf $0}'
 	read CONF_FILE
 	if [ -f db/$CONF_FILE.sbox ]; then
@@ -46,6 +46,7 @@ create_node()
 	fi
 	touch db/$CONF_FILE.sbox || (echo "Error name!!!"; exit 1) || exit 1
 	rm -f db/$CONF_FILE.sbox
+	echo "TRANSFER_TYPE=$TRANSFER_TYPE" >> db/$CONF_FILE.sbox
 	LINE=0
 	while true; do
 		LINE=`expr $LINE + 1`
@@ -65,7 +66,7 @@ create_node()
 			echo "serverName=$sni" >> db/$CONF_FILE.sbox
 			continue
 		fi
-		#获取提问里[]的内容，并设置为可选项以及默认赋值。
+		#获取提问里[]的内容，并设置为可选项以及默认赋值(默认第1个选项)。
 		SELECT=`echo $VAR_VALUE | awk -F'[\\\[\\\]]' '{printf $2}'`
 		if [ ! -z $SELECT ]; then
 			echo "$VAR_VALUE" | awk '{printf $0}'
@@ -147,6 +148,7 @@ create_json()
 			echo "Not alive node!!!"
 			config
 		fi
+		TPL=tpl/$TRANSFER_TYPE.json.tpl
 		if [ -z $network ]; then
 			network=tcp
 		fi
@@ -161,6 +163,9 @@ create_json()
 		fi
 		if [ "$JCON" != "1" ] && [ "$protocol" != "" ] && [ -f tpl/$protocol.json.tpl ]; then
 			TPL=tpl/$protocol.json.tpl
+			JCON=1
+		fi
+		if [ "$JCON" != "1" ] && [ -f tpl/$TRANSFER_TYPE.json.tpl ]; then
 			JCON=1
 		fi
 
@@ -191,6 +196,10 @@ create_json()
 						-e "s/_password_/${password}/g" \
 						-e "s@_private_key_path_@${private_key_path}@g" \
 						-e "s@_private_key_passphrase_@${private_key_passphrase}@g" \
+						-e "s@_up_mbps_@${up_mbps}@g" \
+						-e "s@_down_mbps_@${down_mbps}@g" \
+						-e "s@_congestion_control_@${congestion_control}@g" \
+						-e "s@udp_relay_mode@${_udp_relay_mode_}@g" \
 						> run/${CONF_NUMBER}_$XCONF.json
 	done
 
@@ -567,7 +576,7 @@ subscribe()
 	rm -f db/.subscribe
 	echo "Get $SUB_URL data..." | awk '{printf $0}'
 	curl -skSL --connect-timeout 5 $SUB_URL -o db/.subscribe && echo "done." || (echo "Fail!!!";exit 1) || exit 1
-	cat db/.subscribe | grep '^vless://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
+	cat db/.subscribe | egrep '^vless://|^hysteria2://|^tuic://' | awk 'END{if(NR>0)printf "OK"}' | grep -q '^OK$' || (echo "Error data!!!";exit 1) || exit 1
 	NODE_LIST=`cat db/.subscribe | grep '^vless://' | awk -F'#' '{if (NF==2) print $NF}'`
 	if [ "$NODE_LIST" = "" ]; then
 		echo "Error data!!!"

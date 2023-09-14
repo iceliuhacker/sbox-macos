@@ -5,7 +5,7 @@
             "type": "urltest",
             "outbounds": ["_TAG_LIST_"],
             "url": "https://www.google.com/generate_204",
-            "interval": "10s",
+            "interval": "60s",
             "tolerance": 50
         }
     ]

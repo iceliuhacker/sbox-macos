@@ -75,6 +75,16 @@ create_node()
 			echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
 			continue
 		fi
+		#从"xxxx,default nn:"格式里，提取nn作为默认值
+		DEFAULT_STR=`echo $VAR_VALUE | awk -F'[, :]' '{printf $(NF-2)}'`
+		DEFAULT_VAL=`echo $VAR_VALUE | awk -F'[, :]' '{printf $(NF-1)}'`
+		if [ "$DEFAULT_STR" = "default" ] && [ ! -z $DEFAULT_VAL ]; then
+			echo "$VAR_VALUE" | awk '{printf $0}'
+			read TMP_VAR
+			[ -z $TMP_VAR ] && TMP_VAR=$DEFAULT_VAL
+			echo "${VAR_NAME}=${TMP_VAR}" >> db/$CONF_FILE.sbox
+			continue
+		fi
 
 		echo $VAR_VALUE | awk '{printf $0}'
 		read TMP_VAR

@@ -591,6 +591,17 @@ subscribe()
 		echo "Error data!!!"
 		exit 1
 	fi
+	BAND_SET=
+	cat db/.subscribe | egrep -q '^hysteria2://|^hy2://' && BAND_SET=1
+	if [ ! -z $BAND_SET ]; then
+		echo 'up_mbps,default 30:' | awk '{printf $0}'
+		read HY2_UP
+		[ -z $HY2_UP ] && HY2_UP=30
+
+		echo 'down_mbps,default 100:' | awk '{printf $0}'
+		read HY2_DOWN
+		[ -z $HY2_DOWN ] && HY2_DOWN=100
+	fi
 	echo "Convert subscribe to sing-box:"
 	for NODE in $NODE_LIST; do
 		if [ -f db/$NODE.sbox ]; then
@@ -598,11 +609,14 @@ subscribe()
 		else
 			SUB_ACT="Create"
 		fi
-		PROTOCOL=`cat db/.subscribe | awk -F':' '{printf $1}'`
+		PROTOCOL=`cat db/.subscribe | grep "#${NODE}$" | awk -F':' '{printf $1}'`
 		echo -e "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
+		if [ "$PROTOCOL" = "hysteria2" ] || [ "$PROTOCOL" = "hy2" ]; then
+			echo -e "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
+		fi
 		echo "$SUB_ACT $NODE.sbox..." | awk '{printf $0}'
-		NODE_INFO=`cat db/.subscribe | grep "#${NODE}$" | sed -e 's@vless://@@' -e "s/#${NODE}$//"`
-		echo $NODE_INFO | tr -s '@?&' '\n' | awk '{
+		NODE_INFO=`cat db/.subscribe | grep "#${NODE}$" | sed -e 's@\(.*\)://@@' -e "s/#${NODE}$//"`
+		echo $NODE_INFO | tr -s '@?&/' '\n' | awk '{
 			if (NR==1) print "id="$0;
 			if (NR==2) {
 				split($0,ipv6,"]:");

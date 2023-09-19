@@ -4,7 +4,10 @@ Mac OS下一键使用的sing-box脚本
 目前仅支持outbounds：
 VLESS-XTLS-uTLS-REALITY
 VLESS-XTLS-uTLS-Vision
+hysteria2
+tuic
 socks
+ssh
 有时间会慢慢增加对接方式。
 ```
 # 使用方法：
@@ -47,10 +50,10 @@ Create x.x.x.3_VLESS_VS.sbox...done.
      1  x.x.x.1-VLESS_VS
      2  x.x.x.2_IPv6-VLESS_VS
      3  x.x.x.3-VLESS_VS
-Please select configuration file,Multiple separated by spaces,99 is all,DEL for delete node.
+Please select configuration file,Multiple separated by spaces,all is all,DEL for delete node.
 Example_1:1      -> select 1.
 Example_2:1,3,5  -> select 1,3,5.
-Example_3:99     -> select all.
+Example_3:all     -> select all.
 Please input:[0]0
      1  vless.xtls-rprx-vision.reality
      2  vless.xtls-rprx-vision.tls

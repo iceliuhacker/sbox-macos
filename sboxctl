@@ -207,7 +207,7 @@ create_json()
 						-e "s@_up_mbps_@${up_mbps}@g" \
 						-e "s@_down_mbps_@${down_mbps}@g" \
 						-e "s@_congestion_control_@${congestion_control}@g" \
-						-e "s@udp_relay_mode@${_udp_relay_mode_}@g" \
+						-e "s@_udp_relay_mode_@${udp_relay_mode}@g" \
 						> run/${CONF_NUMBER}_$NODE_JSON.json
 	done
 

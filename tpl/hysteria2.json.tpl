@@ -7,7 +7,7 @@
             "server_port": _port_,
             "up_mbps": _up_mbps_,
             "down_mbps": _down_mbps_,
-            "password": "_id_", // 与服务端一致
+            "password": "_id_",
             "tls": {
                 "enabled": true,
                 "insecure": _allowInsecure_,

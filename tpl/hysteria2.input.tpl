@@ -6,3 +6,4 @@ sni=sni:
 serverName=sni
 up_mbps=up_mbps,default 30:
 down_mbps=down_mbps,default 100:
+allowInsecure=Skip certificate validation:[false,true]

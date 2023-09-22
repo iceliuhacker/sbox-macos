@@ -1,3 +1,4 @@
+protocol=hysteria2
 address=address:
 port=port:
 id=id:

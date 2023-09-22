@@ -1,3 +1,4 @@
+protocol=tuic
 address=address:
 port=port:
 id=id:

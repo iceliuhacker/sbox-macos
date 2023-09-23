@@ -178,7 +178,7 @@ create_json()
 			echo "Error sing-box date \"$XCONF\"!!"
 			continue
 		fi
-		DEST_RULE_LIST=$DEST_RULE_LIST`cat db/$XCONF.sbox | grep 'address=' | awk -F'=' '{print "pass out quick inet proto tcp from any to "$2","}'`
+		DEST_RULE_LIST=$DEST_RULE_LIST`cat db/$XCONF.sbox | grep 'address=' | awk -F'=' '{print "pass out quick inet from any to "$2","}'`
 		
 		CONF_NUMBER=600
 		if [ "$ACTIVE" = "bak" ]; then

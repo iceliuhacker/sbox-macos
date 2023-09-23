@@ -8,7 +8,7 @@
             "type": "mixed",	//socks4,socks4a,socks5,http多功能服务
             "listen": "::",
             "listen_port": 65080, // 本地http和socks5监听端口
-            //"domain_strategy": "ipv4_only",
+            "domain_strategy": "prefer_ipv6",
             "sniff": true,
             "sniff_override_destination": true,
             "set_system_proxy": true

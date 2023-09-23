@@ -10,6 +10,7 @@
             "strict_route": true,
             "inet4_route_address": [_GDNS_],
             "inet6_route_address": [_GDNS6_],
+            "domain_strategy": "prefer_ipv6",
             "sniff": true,
             "sniff_override_destination": true
         }

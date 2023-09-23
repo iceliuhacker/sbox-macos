@@ -36,7 +36,6 @@ create_node()
 		echo "Choice error!!!"
 		exit 1
 	fi
-	TRANSFER_TYPE=`echo $TPL | sed -e 's/^tpl\///' -e 's/.input.tpl$//'`
 	echo "Please enter a node name:" | awk '{printf $0}'
 	read CONF_FILE
 	if [ -f db/$CONF_FILE.sbox ]; then
@@ -46,7 +45,6 @@ create_node()
 	fi
 	touch db/$CONF_FILE.sbox || (echo "Error name!!!"; exit 1) || exit 1
 	rm -f db/$CONF_FILE.sbox
-	echo "TRANSFER_TYPE=$TRANSFER_TYPE" >> db/$CONF_FILE.sbox
 	LINE=0
 	while true; do
 		LINE=`expr $LINE + 1`

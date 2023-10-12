@@ -820,7 +820,7 @@ case $ACT in
 		update
 	;;
 	print)
-		print_conf
+		print_conf | tee sing-box.json
 	;;
 	*)
 		help

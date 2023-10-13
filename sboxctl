@@ -531,10 +531,6 @@ stop()
 restart()
 {
 	chk_sudo
-	[ "$TYPE" = "" ] && ( ps axwww | grep -v grep | grep -q 'sing-box run -C run' && exit 1 || exit 0 ) && TYPE=tun
-	[ "$TYPE" = "" ] && sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' && TYPE=fwd
-	[ "$TYPE" = "" ] && ifconfig | grep -q '100:100:100:100' && TYPE=tun
-	[ "$TYPE" = "" ] && (ifconfig | grep -q '100:100:100:100' || sudo pfctl -sr 2>/dev/null | grep -q '100:100:100:100' || exit 0 ) && TYPE=proxy
 	stop
 	disable_pf
 	create_json
@@ -780,11 +776,14 @@ if [ "$ACT" != "print" ] && [ "$ACT" != "subscribe" ] && [ "$TYPE" != "" ] && [ 
 	help
 	exit 1
 fi
+if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ] || [ "$TYPE" = "proxy" ]; then
+	echo $TYPE > .run_mode
+else
+	[ -z $TYPE ] && [ ! -f .run_mode ] && echo tun > .run_mode
+fi
+echo $ACT | egrep -q '^subscribe$|^print$' || TYPE=`cat .run_mode`
 case $ACT in
 	start)
-		if [ "$TYPE" == "" ]; then
-			TYPE=tun
-		fi
 		check_run
 		chk_sudo
 		create_json
@@ -808,9 +807,6 @@ case $ACT in
 		restart
 	;;
 	config)
-		if [ "$TYPE" == "" ]; then
-			TYPE=tun
-		fi
 		config
 	;;
 	subscribe)

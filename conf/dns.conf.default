@@ -10,7 +10,10 @@ nameserver=223.5.5.5,223.6.6.6=direct
 #自定义域名解析，local为系统DNS
 #domain_suffix=xxx.com,local=nameserver定义
 domain_suffix=hsegrefd.com,local=local
-#国内域名解析
-geosite=cn=223.5.5.5,223.6.6.6
+
 #国外域名解析
 geosite=geolocation-!cn=8.8.8.8,8.8.4.4
+
+#国内域名解析
+geosite=cn=223.5.5.5,223.6.6.6
+

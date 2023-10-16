@@ -11,15 +11,15 @@ domain_suffix=ipip.net=direct
 #去广告
 #geosite=category-ads-all=block
 
-#中国网络直连
-geoip=cn,private=direct
-geosite=cn,apple=direct
-
 #国外网络走梯子(内网域名及国内域名不支持UP_LINK，请转换为IP使用ip类型)
 #ip=8.8.8.8,8.8.4.4,1.1.1.1=UP_LINK
 domain_suffix=ipify.org=UP_LINK
 geosite=geolocation-!cn=UP_LINK
 
+#中国网络直连
+geoip=cn,private=direct
+geosite=cn,apple=direct
+
 #目标端口规则，连续端口用“:”隔开。如：20:22,123，就是20-22端口之间和123端口。
 #*注意：本规则fwd模式下，direct优先级高于其他规则
-#dport=20:21,123=direct
+#dport=20:23,123=direct

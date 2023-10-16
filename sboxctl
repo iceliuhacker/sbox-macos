@@ -221,11 +221,11 @@ create_json()
 		cat tpl/selector.json.tpl | sed -e "s/_ALL_LIST_/${ALL_LIST}/g" > run/710_selector.json
 	fi
 
-	#创建主配置
-	cat tpl/main.json.tpl > run/000_main.json
-	
 	#创建tun配置
-	if [ "$TYPE" = "tun" ] || [ "$TYPE" = "fwd" ]; then
+	if [ "$TYPE" = "proxy" ]; then
+		SET_PROXY=true
+	else
+		SET_PROXY=false
 		if [ "$TYPE" = "fwd" ]; then
 			GDNS='"8.8.8.8/32"'
 			GDNS6='"2001:4860:4860::8888/128"'
@@ -239,6 +239,9 @@ create_json()
 									-e "s@_GDNS6_@${GDNS6}@g" \
 									> run/100_tun.json
 	fi
+
+	#创建主配置
+	cat tpl/main.json.tpl | sed "s/_SET_PROXY_/${SET_PROXY}/" > run/000_main.json
 
 	#创建DNS规则
 	cat << EOF >> run/200_dns.json

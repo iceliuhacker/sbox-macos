@@ -720,7 +720,9 @@ update()
 open_api()
 {
 	if [ -f run/390_clash-api.json ]; then
-		open https://yacd.metacubex.one/
+		echo "Do you open web api?[N/y]" | awk '{printf $0}'
+		read CON
+		echo $CON | egrep -q -i 'y|yes' && open https://yacd.metacubex.one/
 	fi
 }
 

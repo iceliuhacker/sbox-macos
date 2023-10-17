@@ -6,10 +6,10 @@
             "external_ui_download_url": "",
             "external_ui_download_detour": "",
             "secret": "",
-            "default_mode": "",
-            "store_selected": false,
-            "cache_file": "",
-            "cache_id": ""
+            //"default_mode": "",
+            "store_selected": true,
+            "cache_file": "client.db",
+            "cache_id": "client"
         }
     }
 }

@@ -287,10 +287,6 @@ EOF
 	if [ ! -z $SBOX_DLIST ]; then
 		cat << EOF >> run/200_dns.json
             {
-                "query_type": ["MX","SOA"],
-                "server": "block"
-            },
-            {
                 "domain_suffix": [${SBOX_DLIST}],
                 "server": "local"
             },

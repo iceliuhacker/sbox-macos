@@ -15,3 +15,7 @@ _tun_ip6='fd00::100:100:100:100'
 
 #设置系统代理，可选：auto,yes,no，默认：auto (tun,fwd:false proxy:true)
 SET_SYS_PROXY=auto
+
+#web api配置
+WEB_API=yes
+OPEN_WEB_API=yes

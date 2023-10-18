@@ -272,6 +272,10 @@ EOF
                 "tag": "local",
                 "address": "local",
                 "detour": "direct"
+            },
+            {
+                "tag": "block",
+                "address": "rcode://success"
             }
         ],
         "rules": [
@@ -279,6 +283,10 @@ EOF
 	SBOX_DLIST=`awk -F'=' '{if($1=="address") print $2}' db/*.sbox | tr -d \' | awk -F'.' '{if($NF !~ /^[0-9]+$/) printf "\""$0"\","}' | sed 's/,$//'`
 	if [ ! -z $SBOX_DLIST ]; then
 		cat << EOF >> run/200_dns.json
+            {
+                "query_type": ["MX","SOA"],
+                "server": "block"
+            },
             {
                 "domain_suffix": [${SBOX_DLIST}],
                 "server": "local"

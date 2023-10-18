@@ -1,0 +1,17 @@
+#from:https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
+PRIVATE_IPV4='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,169.254.0.0/16,240.0.0.0/4,0.0.0.0/8,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24'
+#from:https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
+PRIVATE_IPV6='fc00::/7,fe80::/10,0000::8,0100::/8,0200::7,0400::/6,0800::/5,1000::/4,4000::/3,6000::/3,8000::/3,a000::/3,c000::/3,e000::/4,f000::/5,f800::/6,fe00::/8,fec0::/10,ff00::/8'
+
+#启动时网络检测用的网址
+CHK_LIST='www.google.com www.youtube.com www.facebook.com www.baidu.com www.sohu.com'
+
+#tun驱动stack，可选：system,gvisor，system性能更好，gvisor兼容性更好
+TUN_STACK=system
+
+#tun模式使用的IP
+_tun_ip=100.100.100.100
+_tun_ip6='fd00::100:100:100:100'
+
+#设置系统代理，可选：auto,yes,no，默认：auto (tun,fwd:false proxy:true)
+SET_SYS_PROXY=auto

@@ -1,14 +1,6 @@
 #!/bin/bash
 
 
-#from:https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
-PRIVATE_IPV4='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,169.254.0.0/16,240.0.0.0/4,0.0.0.0/8,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24'
-#from:https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
-PRIVATE_IPV6='fc00::/7,fe80::/10,0000::8,0100::/8,0200::7,0400::/6,0800::/5,1000::/4,4000::/3,6000::/3,8000::/3,a000::/3,c000::/3,e000::/4,f000::/5,f800::/6,fe00::/8,fec0::/10,ff00::/8'
-
-CHK_LIST='www.google.com www.youtube.com www.facebook.com www.baidu.com www.sohu.com'
-_tun_ip=100.100.100.100
-_tun_ip6='fd00::100:100:100:100'
 ACT=$1
 TYPE=$2
 
@@ -223,9 +215,13 @@ create_json()
 
 	#创建tun配置
 	if [ "$TYPE" = "proxy" ]; then
-		SET_PROXY=true
+		if [ "$SET_SYS_PROXY" = "auto" ]; then
+			SET_SYS_PROXY=true
+		fi
 	else
-		SET_PROXY=false
+		if [ "$SET_SYS_PROXY" = "auto" ]; then
+			SET_SYS_PROXY=false
+		fi
 		if [ "$TYPE" = "fwd" ]; then
 			GDNS='"8.8.8.8/32"'
 			GDNS6='"2001:4860:4860::8888/128"'
@@ -237,11 +233,12 @@ create_json()
 									-e "s/_tun_ip6_/${_tun_ip6}/g" \
 									-e "s@_GDNS_@${GDNS}@g" \
 									-e "s@_GDNS6_@${GDNS6}@g" \
+									-e "s@_TUN_STACK_@${TUN_STACK}@g" \
 									> run/100_tun.json
 	fi
 
 	#创建主配置
-	cat tpl/main.json.tpl | sed "s/_SET_PROXY_/${SET_PROXY}/" > run/000_main.json
+	cat tpl/main.json.tpl | sed "s/_SET_SYS_PROXY_/${SET_SYS_PROXY}/" > run/000_main.json
 
 	#创建DNS规则
 	cat << EOF >> run/200_dns.json
@@ -765,7 +762,9 @@ Optional:
 HELP
 }
 
-
+if [ ! -f conf/system.conf ]; then
+	cp conf/system.conf.default conf/system.conf
+fi
 if [ ! -f conf/dns.conf ]; then
 	cp conf/dns.conf.default conf/dns.conf
 fi
@@ -773,6 +772,7 @@ if [ ! -f conf/route.conf ]; then
 	cp conf/route.conf.default conf/route.conf
 fi
 touch conf/run.conf
+source conf/system.conf
 
 if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$ACT" != "" ]; then
 	echo "No found \"sing-box\"!!!"

@@ -2,7 +2,7 @@
     "inbounds": [
         {
             "type": "tun",
-            "stack": "system",    //可选：system,gvisor，如果当前不可用可换另外一个
+            "stack": "_TUN_STACK_",
             "inet4_address": "_tun_ip_/30",
             "inet6_address": "_tun_ip6_/126",
             "mtu": 9000,

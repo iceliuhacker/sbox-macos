@@ -11,7 +11,7 @@
             "domain_strategy": "prefer_ipv6",
             "sniff": true,
             "sniff_override_destination": true,
-            "set_system_proxy": _SET_PROXY_
+            "set_system_proxy": _SET_SYS_PROXY_
         }
     ]
 }

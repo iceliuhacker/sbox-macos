@@ -288,6 +288,7 @@ EOF
                 "server": "block"
             },
             {
+                "query_type": ["A","AAAA"],
                 "domain_suffix": [${SBOX_DLIST}],
                 "server": "local"
             },

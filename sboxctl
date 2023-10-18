@@ -449,10 +449,12 @@ table <skip_net6> { $_skip_net6 }
 	fi
 )`
 
-pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
+#pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
+pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user = $ME
 pass out quick route-to ($TUN_IF $_tun_ip) inet from any to ! <skip_net> user = $ME
 
-pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
+#pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
+pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto {tcp,udp} from any to any port 53 user = $ME
 pass out quick route-to ($TUN_IF $_tun_ip6) inet6 from any to ! <skip_net6> user = $ME
 
 #pass out quick all
@@ -461,6 +463,7 @@ EOF
 	sudo pfctl -f run/pf.rules > /dev/null 2>&1 || (echo "PF firewall rule \"run/pf.rules\" load Fail!!!"; sudo pfctl -f run/pf.rules; exit 1) || exit 1
 	dscacheutil -flushcache 2>&1
 	sudo dscacheutil -flushcache 2>&1
+	sudo killall -HUP mDNSResponder 2>&1
 }
 
 disable_pf()
@@ -468,6 +471,7 @@ disable_pf()
 	sudo pfctl -dF all > /dev/null 2>&1
 	dscacheutil -flushcache 2>&1
 	sudo dscacheutil -flushcache 2>&1
+	sudo killall -HUP mDNSResponder 2>&1
 }
 
 enable_proxy()

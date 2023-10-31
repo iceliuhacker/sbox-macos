@@ -3,6 +3,7 @@
 
 ACT=$1
 TYPE=$2
+NEW_VERSION=$2
 
 
 
@@ -662,7 +663,11 @@ update()
 	fi
 	./sing-box version 2>/dev/null
 	NOW_VERSION=`./sing-box version 2>/dev/null | awk '{if (NR>1) exit;printf $3}'`
-	NEW_VERSION=`curl -skSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags 2>/dev/null | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
+	if [ -z $NEW_VERSION ]; then
+		NEW_VERSION=`curl -skSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags 2>/dev/null | grep name | awk -F'"' '{if (NR>1) exit;printf $4}' | sed 's/^v//'`
+	else
+		curl -skSL $SOCKS5 https://api.github.com/repos/SagerNet/sing-box/tags 2>/dev/null | grep name | awk -F'"' '{print $4}' | sed 's/^v//' | grep -q "^${NEW_VERSION}$" || (echo "No $NEW_VERSION version available.";exit 1) || exit 1
+	fi
 	if [ ! -z "$NEW_VERSION" ] && [ "$NOW_VERSION" != "$NEW_VERSION" ] || [ "$NOW_VERSION" = "" ]; then
 		echo "Have a new version:$NEW_VERSION,do you upgrade?[N/y]" | awk '{printf $0}'
 		read CON

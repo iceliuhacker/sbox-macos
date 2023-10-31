@@ -800,7 +800,7 @@ if [ ! -f sing-box ] && [ "$ACT" != "update" ] && [ "$ACT" != "stop" ] && [ "$AC
 	echo "No found \"sing-box\"!!!"
 	update
 fi
-if [ "$ACT" != "print" ] && [ "$ACT" != "subscribe" ] && [ "$TYPE" != "" ] && [ "$TYPE" != "tun" ] && [ "$TYPE" != "fwd" ] && [ "$TYPE" != "proxy" ]; then
+if [ "$ACT" != "update" ] && [ "$ACT" != "print" ] && [ "$ACT" != "subscribe" ] && [ "$TYPE" != "" ] && [ "$TYPE" != "tun" ] && [ "$TYPE" != "fwd" ] && [ "$TYPE" != "proxy" ]; then
 	help
 	exit 1
 fi

@@ -460,10 +460,12 @@ table <skip_net6> { $_skip_net6 }
 pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
 #pass out quick route-to ($TUN_IF $_tun_ip) inet proto {tcp,udp} from any to any port 53 user = $ME
 pass out quick route-to ($TUN_IF $_tun_ip) inet from any to ! <skip_net> user = $ME
+pass out quick route-to ($TUN_IF $_tun_ip) inet proto icmp from any to ! <skip_net>
 
 pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto {tcp,udp} from any to any port 53 user {$ME,_mdnsresponder}
 #pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto {tcp,udp} from any to any port 53 user = $ME
 pass out quick route-to ($TUN_IF $_tun_ip6) inet6 from any to ! <skip_net6> user = $ME
+pass out quick route-to ($TUN_IF $_tun_ip6) inet6 proto icmp6 from any to ! <skip_net6>
 
 #pass out quick all
 EOF

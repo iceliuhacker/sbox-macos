@@ -267,7 +267,7 @@ EOF
 			print "            },";
 		}
 	}' >> run/200_dns.json
-	LOCAL_DNS=`awk '{if($1 ~/^nameserver$/) print $2;}' /etc/resolv.conf`
+	LOCAL_DNS=`awk '{if($1 ~/^nameserver$/) print $2;}' /etc/resolv.conf | grep -v ':'`
 	for LOCAL_DNS in $LOCAL_DNS; do
 		host -W 1 -t soa . $LOCAL_DNS > /dev/null && break
 	done

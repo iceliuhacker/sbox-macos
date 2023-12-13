@@ -419,15 +419,29 @@ EOF
 			HOST_LIST=$DPORT
 		fi
 		HOST_ACT=`echo $RT | awk -F'=' '{printf $3}'`
-		
-		cat << EOF >> run/300_route.json
+
+		echo $HOST_TYPE | egrep -q 'geosite|geoip' && cat << EOF >> run/300_route.json
+            {
+                "type": "logical",
+                "mode": "and",
+                "rules": [
+                    {
+                        "rule_set": ["${HOST_TYPE}-`echo $HOST_LIST | sed "s/\",\"/\",\"${HOST_TYPE}-/g"`"]
+                    }
+                ],
+                "outbound": "$HOST_ACT"
+            },
+EOF
+
+		echo $HOST_TYPE | egrep -q 'geosite|geoip' || cat << EOF >> run/300_route.json
             {
                 "$HOST_TYPE": ["$HOST_LIST"],
                 "outbound": "$HOST_ACT"
             },
 EOF
+
 		if [ "$HOST_TYPE" = "geoip" ] && [ "$HOST_ACT" = "direct" ]; then
-			echo $HOST_LIST | tr -s ',"' '\n' | grep -q '^private$' && echo ","$PRIVATE_IPV4 >> run/route_ipv4.direct && echo ","$PRIVATE_IPV6 >> run/route_ipv6.direct
+			echo ","$PRIVATE_IPV4 >> run/route_ipv4.direct && echo ","$PRIVATE_IPV6 >> run/route_ipv6.direct
 			echo $HOST_LIST | tr -s ',"' '\n' | grep -q '^cn$' && cat conf/cn_ipv4.txt >> run/route_ipv4.direct && cat conf/cn_ipv6.txt >> run/route_ipv6.direct
 		fi
 	done

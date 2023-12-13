@@ -320,7 +320,8 @@ EOF
             },
 EOF
 	fi
-	egrep 'domain_suffix=' conf/route.conf \
+
+	egrep 'domain_suffix=' conf/dns.conf \
 	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
 		DLIST=$2;
@@ -334,27 +335,47 @@ EOF
 		};
 
 	}' >> run/200_dns.json
-	grep -q 'geosite=' conf/route.conf || sed -i '' '$s/},/}/' run/200_dns.json
 
-	egrep 'geosite=' conf/route.conf \
+	DIRECT_DNS=`cat conf/dns.conf | grep '=direct$' | awk -F'#' '{if (NR>1) print $1}' | awk -F'=' '{printf $2","}' | sed 's/,$//'`
+	if [ -z $DIRECT_DNS ]; then
+		DIRECT_DNS=local
+	fi
+	UP_LINK_DNS=`cat conf/dns.conf | grep '=UP_LINK$' | awk -F'#' '{if (NR>1) print $1}' | awk -F'=' '{printf $2","}' | sed 's/,$//'`
+	if [ -z $UP_LINK_DNS ]; then
+		UP_LINK_DNS=8.8.8.8
+	fi
+	egrep 'domain_suffix=|geosite=' conf/route.conf \
 	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
 		DLIST=$2;
-		gsub(/,/,"\",\"geosite-",DLIST);
-		LEN=split($3,DNS,",");
-		for(i=1;i<=LEN;i++) {
-			print "            {";
-			print "                \"type\": \"logical\",";
-			print "                \"mode\": \"and\",";
-			print "                \"rules\": [";
-			print "                    {";
-			print "                        \"rule_set\": [\"geosite-"DLIST"\"]";
-			print "                    }";
-			print "                ],";
-			print "                \"server\": \""DNS[i]"\"";
-			print "            },";
+		DNS_LIST="local";
+		if ($3=="direct") DNS_LIST="'$DIRECT_DNS'";
+		if ($3=="UP_LINK") DNS_LIST="'$UP_LINK_DNS'"; 
+		LEN=split(DNS_LIST,DNS,",");
+		if ($1=="domain_suffix") {
+			gsub(/,/,"\",\"",DLIST);
+			for(i=1;i<=LEN;i++) {
+				print "            {";
+				print "                \""$1"\": [\""DLIST"\"],";
+				print "                \"server\": \""DNS[i]"\"";
+				print "            },";
+			};
 		};
-
+		if ($1=="geosite") {
+			gsub(/,/,"\",\"geosite-",DLIST);
+			for(i=1;i<=LEN;i++) {
+				print "            {";
+				print "                \"type\": \"logical\",";
+				print "                \"mode\": \"and\",";
+				print "                \"rules\": [";
+				print "                    {";
+				print "                        \"rule_set\": [\"geosite-"DLIST"\"]";
+				print "                    }";
+				print "                ],";
+				print "                \"server\": \""DNS[i]"\"";
+				print "            },";
+			};
+		};
 	}' | sed '$s/},/}/' >> run/200_dns.json
 
 	cat << EOF >> run/200_dns.json
@@ -826,21 +847,14 @@ open_api()
 
 print_conf()
 {	
-	if [ "$TYPE" = "ios" ] || [ "$TYPE" = "and" ]; then
-		SYS_PROXY=false
-	else
+	if [ "$TYPE" = "pc" ]; then
 		SYS_PROXY=true
-	fi
-	if [ "$TYPE" = "and" ]; then
-		TUN_DRV=gvisor
 	else
-		TUN_DRV=system
+		SYS_PROXY=false
 	fi
-	cat << EOF | sed -e "s/\"set_system_proxy\": \(.*\)/\"set_system_proxy\": $SYS_PROXY/" -e "s/\"stack\": \"system\",/\"stack\": \"$TUN_DRV\",/"
-{
-`./sing-box format -C run | egrep -v '^/|^{|^}' | sed -e 's/^  }$/  },/' -e 's/^  \]$/  \],/' -e '/^$/d' | sed '$s/^  ],/  ]/' | awk '{printf $0"|"}' | sed -e 's/}|  \],|  "inbounds": \[/},|/g' -e 's/}|  \],|  "outbounds": \[|/},|/g' | tr -s '|' '\n'`
-}
-EOF
+	./sing-box merge -C run .sing-box.json.tmp
+	sed -e "s/\"set_system_proxy\": \(.*\)/\"set_system_proxy\": $SYS_PROXY/" .sing-box.json.tmp | tee sing-box.json
+	rm -f .sing-box.json.tmp
 }
 
 help()
@@ -853,7 +867,7 @@ restart		Restart Sing-box.
 config		Set to use nodes, but set multiple at the same time.
 subscribe	Subscribe.
 update		Upgrade sing-box,or update geoip and geosite.
-print		[ios|and] Print Configuration.
+print		[pc] Print Configuration.
 Optional:
 	tun		Use routing mode to forward user data. (Warning:Destroying local routing)
 	fwd		Use PF firewall mode to forward user data.

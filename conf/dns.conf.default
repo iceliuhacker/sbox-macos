@@ -2,6 +2,11 @@
 #dns服务器路由定义:
 #nameserver=DNS_IP=路由
 #路由可选：direct,UP_LINK
+#direct类型的dns如果没有定义则自动使用系统自带的dns作为解析
+#local类型的DNS不需要特殊定义，直接使用系统DNS
 #nameserver=8.8.8.8=UP_LINK
 nameserver=8.8.8.8,8.8.4.4=UP_LINK
 nameserver=223.5.5.5,223.6.6.6=direct
+
+#通常这里不需要设置任何域名解析定义，除非有特殊需求，比如某个域名只有特定DNS才能进行解析
+#domain_suffix=xxx.com,smb.local=local

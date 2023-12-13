@@ -241,6 +241,33 @@ create_json()
 	#创建主配置
 	cat tpl/main.json.tpl | sed "s/_SET_SYS_PROXY_/${SET_SYS_PROXY}/" > run/000_main.json
 
+	#创建规则集
+	cat << EOF >> run/200_rules.json
+{
+    "route": {
+        "rule_set": [
+EOF
+	egrep 'geoip=|geosite=' conf/route.conf  \
+	| awk -F'#' '{if ($1!="") print $1}' \
+	| awk -F'=' '{
+		LEN=split($2,RULES,",");
+		for(i=1;i<=LEN;i++) {
+			print "            {";
+			print "                \"tag\": \""$1"-"RULES[i]"\",";
+			print "                \"type\": \"remote\",";
+			print "                \"format\": \"binary\",";
+			print "                \"url\": \"https://raw.githubusercontent.com/SagerNet/sing-"$1"/rule-set/"$1"-"RULES[i]".srs\",";
+			print "                \"download_detour\": \"UP_LINK\"";
+			print "            },";
+		}
+	}' | sed '$s/},/}/' >> run/200_rules.json
+
+	cat << EOF >> run/200_rules.json
+        ]
+    }
+}
+EOF
+
 	#创建DNS规则
 	cat << EOF >> run/200_dns.json
 {
@@ -293,7 +320,7 @@ EOF
             },
 EOF
 	fi
-	egrep 'domain_suffix=|geosite=' conf/dns.conf \
+	egrep 'domain_suffix=' conf/route.conf \
 	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
 		DLIST=$2;
@@ -306,7 +333,30 @@ EOF
 			print "            },";
 		};
 
+	}' >> run/200_dns.json
+	grep -q 'geosite=' conf/route.conf || sed -i '' '$s/},/}/' run/200_dns.json
+
+	egrep 'geosite=' conf/route.conf \
+	| awk -F'#' '{if ($1!="") print $1}' \
+	| awk -F'=' '{
+		DLIST=$2;
+		gsub(/,/,"\",\"geosite-",DLIST);
+		LEN=split($3,DNS,",");
+		for(i=1;i<=LEN;i++) {
+			print "            {";
+			print "                \"type\": \"logical\",";
+			print "                \"mode\": \"and\",";
+			print "                \"rules\": [";
+			print "                    {";
+			print "                        \"rule_set\": [\"geosite-"DLIST"\"]";
+			print "                    }";
+			print "                ],";
+			print "                \"server\": \""DNS[i]"\"";
+			print "            },";
+		};
+
 	}' | sed '$s/},/}/' >> run/200_dns.json
+
 	cat << EOF >> run/200_dns.json
         ]
     }
@@ -334,6 +384,18 @@ EOF
             {
                 "protocol": "dns",
                 "outbound": "dns-out"
+            },
+            {
+                "ip_is_private": true,
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "Direct",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "Global",
+                "outbound": "default"
             },
 EOF
 	RT_INFO=`cat conf/route.conf | awk -F'#' '{print $1}'`

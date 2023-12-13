@@ -17,7 +17,7 @@ domain_suffix=ipify.org=UP_LINK
 geosite=geolocation-!cn=UP_LINK
 
 #中国网络直连
-geoip=cn,private=direct
+geoip=cn=direct
 geosite=cn,apple=direct
 
 #目标端口规则，连续端口用“:”隔开。如：20:22,123，就是20-22端口之间和123端口。

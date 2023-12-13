@@ -395,7 +395,7 @@ EOF
             },
             {
                 "clash_mode": "Global",
-                "outbound": "default"
+                "outbound": "UP_LINK"
             },
 EOF
 	RT_INFO=`cat conf/route.conf | awk -F'#' '{print $1}'`

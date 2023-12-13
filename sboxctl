@@ -815,27 +815,9 @@ update()
 		echo "cncidr: Not new data."
 	fi
 
-	# 更新geo数据
-	DAT_LIST='geoip geosite'
-	for DAT in $DAT_LIST; do
-		URL=https://github.com/soffchen/sing-$DAT/releases/latest/download/$DAT.db
-		touch $DAT.db
-		NOW_MD5=`md5 $DAT.db | awk '{printf $NF}'`
-		NEW_MD5=$NOW_MD5
-		echo "Download $URL..." | awk '{printf $0}'
-		curl -skSL $SOCKS5 -w %{http_code} --retry 3 --connect-timeout 3 $URL -o $DAT.db.new | grep -q '^200$' &&\
-			NEW_MD5=`md5 $DAT.db.new | awk '{printf $NF}'` && echo "done." || (echo "Fail!!!"; exit 1) || continue
-		if [ "$NEW_MD5" != "$NOW_MD5" ]; then
-			mv $DAT.db $DAT.db.old
-			mv $DAT.db.new $DAT.db
-		else
-			rm -f $DAT.db.new
-			echo "$DAT.db: Not new data."
-		fi
-	done
-	echo "Do you restart sing-box?[Y/n]" | awk '{printf $0}'
+	echo "Do you restart sing-box?[N/y]" | awk '{printf $0}'
 	read CON
-	echo $CON | egrep -q -i 'no|n' || restart
+	echo $CON | egrep -q -i 'y|yes' && restart
 }
 
 open_api()
@@ -855,6 +837,8 @@ print_conf()
 	./sing-box merge -C run .sing-box.json.tmp
 	sed -e "s/\"set_system_proxy\": \(.*\)/\"set_system_proxy\": $SYS_PROXY/" .sing-box.json.tmp | tee sing-box.json
 	rm -f .sing-box.json.tmp
+	echo "" >&2
+	echo "The configuration file has been saved to \"$PWD/sing-box.json\"." >&2
 }
 
 help()

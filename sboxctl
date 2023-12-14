@@ -242,16 +242,19 @@ create_json()
 	cat tpl/main.json.tpl | sed "s/_SET_SYS_PROXY_/${SET_SYS_PROXY}/" > run/000_main.json
 
 	#创建规则集
-	cat << EOF >> run/200_rules.json
+	cat << EOF >> run/300_route_rules-set.json
 {
     "route": {
         "rule_set": [
 EOF
-	egrep 'geoip=|geosite=' conf/route.conf  \
+	touch run/.rules-set
+	cat conf/route.conf conf/dns.conf | egrep 'geoip=|geosite=' \
 	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
 		LEN=split($2,RULES,",");
 		for(i=1;i<=LEN;i++) {
+			R_EXIST=system("grep -q \""$1"-"RULES[i]"\" run/.rules-set");
+			if (R_EXIST==0) continue;
 			print "            {";
 			print "                \"tag\": \""$1"-"RULES[i]"\",";
 			print "                \"type\": \"remote\",";
@@ -259,10 +262,12 @@ EOF
 			print "                \"url\": \"https://raw.githubusercontent.com/SagerNet/sing-"$1"/rule-set/"$1"-"RULES[i]".srs\",";
 			print "                \"download_detour\": \"UP_LINK\"";
 			print "            },";
+			system("echo \""$1"-"RULES[i]"\" >> run/.rules-set");
 		}
-	}' | sed '$s/},/}/' >> run/200_rules.json
+	}' | sed '$s/},/}/' >> run/300_route_rules-set.json
+	rm -f run/.rules-set
 
-	cat << EOF >> run/200_rules.json
+	cat << EOF >> run/300_route_rules-set.json
         ]
     }
 }
@@ -440,6 +445,7 @@ EOF
 			HOST_LIST=$DPORT
 		fi
 		HOST_ACT=`echo $RT | awk -F'=' '{printf $3}'`
+		INVERT=`echo $RT | awk -F'=' '{if($4=="invert") printf "true";else printf "false"}'`
 
 		echo $HOST_TYPE | egrep -q 'geosite|geoip' && cat << EOF >> run/300_route.json
             {
@@ -450,6 +456,7 @@ EOF
                         "rule_set": ["${HOST_TYPE}-`echo $HOST_LIST | sed "s/\",\"/\",\"${HOST_TYPE}-/g"`"]
                     }
                 ],
+                "invert": ${INVERT},
                 "outbound": "$HOST_ACT"
             },
 EOF
@@ -457,6 +464,7 @@ EOF
 		echo $HOST_TYPE | egrep -q 'geosite|geoip' || cat << EOF >> run/300_route.json
             {
                 "$HOST_TYPE": ["$HOST_LIST"],
+                "invert": ${INVERT},
                 "outbound": "$HOST_ACT"
             },
 EOF

@@ -1,9 +1,10 @@
 #路由规则：
-#类别=数据=动作(direct|UP_LINK)
+#类别=数据=动作(direct|UP_LINK)=invert[可选]
 #类别：geosite, geoip, domain_suffix, ip, port
 #数据：多个用“,”隔开
 #动作：direct(直连),UP_LINK(梯子)
 #注意：UP_LINK优先于direct
+#invert：匹配反向规则
 
 #特定域名直连
 domain_suffix=ipip.net=direct
@@ -18,6 +19,7 @@ geosite=geolocation-!cn=UP_LINK
 
 #中国网络直连
 geoip=cn=direct
+geoip=cn=UP_LINK=invert
 geosite=cn,apple=direct
 
 #目标端口规则，连续端口用“:”隔开。如：20:22,123，就是20-22端口之间和123端口。

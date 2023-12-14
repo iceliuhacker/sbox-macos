@@ -326,36 +326,25 @@ EOF
 EOF
 	fi
 
-	egrep 'domain_suffix=' conf/dns.conf \
-	| awk -F'#' '{if ($1!="") print $1}' \
-	| awk -F'=' '{
-		DLIST=$2;
-		gsub(/,/,"\",\"",DLIST);
-		LEN=split($3,DNS,",");
-		for(i=1;i<=LEN;i++) {
-			print "            {";
-			print "                \""$1"\": [\""DLIST"\"],";
-			print "                \"server\": \""DNS[i]"\"";
-			print "            },";
-		};
-
-	}' >> run/200_dns.json
-
-	DIRECT_DNS=`cat conf/dns.conf | grep '=direct$' | awk -F'#' '{if (NR>1) print $1}' | awk -F'=' '{printf $2","}' | sed 's/,$//'`
+	DIRECT_DNS=`cat conf/dns.conf | grep '=direct$' | awk -F'#' '{if ($1!="") print $1}' | awk -F'=' '{printf $2","}' | sed 's/,$//'`
 	if [ -z $DIRECT_DNS ]; then
 		DIRECT_DNS=local
 	fi
-	UP_LINK_DNS=`cat conf/dns.conf | grep '=UP_LINK$' | awk -F'#' '{if (NR>1) print $1}' | awk -F'=' '{printf $2","}' | sed 's/,$//'`
+	UP_LINK_DNS=`cat conf/dns.conf | grep '=UP_LINK$' | awk -F'#' '{if ($1!="") print $1}' | awk -F'=' '{printf $2","}' | sed 's/,$//'`
 	if [ -z $UP_LINK_DNS ]; then
 		UP_LINK_DNS=8.8.8.8
 	fi
-	egrep 'domain_suffix=|geosite=' conf/route.conf \
+	cat conf/dns.conf conf/route.conf | egrep 'domain_suffix=|geosite=' \
 	| awk -F'#' '{if ($1!="") print $1}' \
 	| awk -F'=' '{
 		DLIST=$2;
-		DNS_LIST="local";
+		DNS_LIST=local;
+		if ($3=="local") DNS_LIST="local";
+		if ($3~/^([0-9]{1,3}\.){3}[0-9]{1,3}/) DNS_LIST=$3;
 		if ($3=="direct") DNS_LIST="'$DIRECT_DNS'";
-		if ($3=="UP_LINK") DNS_LIST="'$UP_LINK_DNS'"; 
+		if ($3=="UP_LINK") DNS_LIST="'$UP_LINK_DNS'";
+		INVERT="false";
+		if ($4=="invert") INVERT="true";
 		LEN=split(DNS_LIST,DNS,",");
 		if ($1=="domain_suffix") {
 			gsub(/,/,"\",\"",DLIST);
@@ -377,6 +366,7 @@ EOF
 				print "                        \"rule_set\": [\"geosite-"DLIST"\"]";
 				print "                    }";
 				print "                ],";
+				print "                \"invert\": "INVERT",";
 				print "                \"server\": \""DNS[i]"\"";
 				print "            },";
 			};

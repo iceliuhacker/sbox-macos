@@ -226,6 +226,7 @@ create_json()
 		if [ "$TYPE" = "fwd" ]; then
 			GDNS='"8.8.8.8/32"'$(cat /etc/resolv.conf | grep '^nameserver' | grep -v ':' | awk '{printf ",\""$2"/32\""}')
 			GDNS6='"2001:4860:4860::8888/128"'$(cat /etc/resolv.conf | grep '^nameserver' | grep  ':' | awk '{printf ",\""$2"/128\""}')
+			TUN_STACK=gvisor
 		else
 			GDNS=''
 			GDNS6=''

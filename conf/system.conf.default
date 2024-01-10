@@ -6,8 +6,8 @@ PRIVATE_IPV6='fc00::/7,fe80::/10,0000::8,0100::/8,0200::7,0400::/6,0800::/5,1000
 #启动时网络检测用的网址
 CHK_LIST='www.google.com www.youtube.com www.facebook.com www.baidu.com www.sohu.com'
 
-#tun驱动stack，可选：system,gvisor，system性能更好，gvisor兼容性更好
-TUN_STACK=gvisor
+#tun虚拟网卡TCP/IP栈，可选：mixed,system,gvisor，system性能更好，gvisor兼容性更好，mixed混合system TCP栈与gvisor UDP栈
+TUN_STACK=mixed
 
 #tun模式使用的IP
 _tun_ip=100.100.100.100

@@ -17,5 +17,5 @@ _tun_ip6='fd00::100:100:100:100'
 SET_SYS_PROXY=auto
 
 #web api配置
-WEB_API=yes
+WEB_API=https://yacd.metacubex.one/
 OPEN_WEB_API=yes

@@ -224,8 +224,8 @@ create_json()
 			SET_SYS_PROXY=false
 		fi
 		if [ "$TYPE" = "fwd" ]; then
-			GDNS='"8.8.8.8/32"'
-			GDNS6='"2001:4860:4860::8888/128"'
+			GDNS='"8.8.8.8/32"'$(cat /etc/resolv.conf | grep '^nameserver' | grep -v ':' | awk '{printf ",\""$2"\""}')
+			GDNS6='"2001:4860:4860::8888/128"'$(cat /etc/resolv.conf | grep '^nameserver' | grep  ':' | awk '{printf ",\""$2"\""}')
 		else
 			GDNS=''
 			GDNS6=''
@@ -512,7 +512,7 @@ enable_pf()
 {
 	check_startd_ok
 	ME=`whoami`
-	_first_fwd_ipv4="8.8.8.8$(cat /etc/resolv.conf | grep '^nameserver' | grep -v ':' | awk '{printf ","$2}' )"
+	_first_fwd_ipv4="8.8.8.8$(cat /etc/resolv.conf | grep '^nameserver' | grep -v ':' | awk '{printf ","$2}')"
 	_first_fwd_ipv6="2001:4860:4860::8888$(cat /etc/resolv.conf | grep '^nameserver' | grep  ':' | awk '{printf ","$2}')"
 	if [ -f run/route_ipv4.fwd ]; then
 		_first_fwd_ipv4=$_first_fwd_ipv4`cat run/route_ipv4.fwd | tr -d '\r\n'`

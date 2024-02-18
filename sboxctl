@@ -224,7 +224,8 @@ create_json()
 			SET_SYS_PROXY=false
 		fi
 		if [ "$TYPE" = "fwd" ]; then
-			GDNS='"8.8.8.8/32"'$(cat /etc/resolv.conf | grep '^nameserver' | grep -v ':' | awk '{printf ",\""$2"/32\""}')
+			DEF_RT="$(netstat -rn -f inet | grep '^default ' | awk '{printf "|^"$2"$"}')" 
+			GDNS='"8.8.8.8/32"'$(cat /etc/resolv.conf | grep '^nameserver' | egrep -v ":$DEF_RT" | awk '{printf ",\""$2"/32\""}')
 			GDNS6='"2001:4860:4860::8888/128"'$(cat /etc/resolv.conf | grep '^nameserver' | grep  ':' | awk '{printf ",\""$2"/128\""}')
 			TUN_STACK=gvisor
 		else

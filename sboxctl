@@ -181,6 +181,7 @@ create_json()
 		cat $TPL | sed -e "s/_TAG_/-${XCONF}/g" \
 						-e "s/_protocol_/${protocol}/g" \
 						-e "s/_address_/${address}/g" \
+						-e "s/_R_NODE_IPV_/${R_NODE_IPV}/g" \
 						-e "s/_port_/${port}/g" \
 						-e "s/_flow_/${flow}/g" \
 						-e "s/_id_/${id}/g" \

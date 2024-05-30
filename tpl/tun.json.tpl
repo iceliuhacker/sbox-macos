@@ -3,7 +3,7 @@
         {
             "type": "tun",
             "stack": "_TUN_STACK_",
-            "inet4_address": "_tun_ip_/30",
+            "inet4_address": "_tun_ip_/29",
             "inet6_address": "_tun_ip6_/126",
             "mtu": 9000,
             "auto_route": true,

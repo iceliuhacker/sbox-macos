@@ -178,6 +178,7 @@ create_json()
 			CONF_NUMBER=700
 		fi
 		NODE_JSON=`./sing-box generate uuid`
+		echo $R_NODE_IPV | egrep -q '^prefer_ipv6$|^prefer_ipv4$' || R_NODE_IPV=prefer_ipv6
 		cat $TPL | sed -e "s/_TAG_/-${XCONF}/g" \
 						-e "s/_protocol_/${protocol}/g" \
 						-e "s/_address_/${address}/g" \

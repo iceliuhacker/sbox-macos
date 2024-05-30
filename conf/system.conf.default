@@ -3,8 +3,8 @@ PRIVATE_IPV4='192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,224.0.0.0/3,100.64.0.0/10,
 #from:https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
 PRIVATE_IPV6='fc00::/7,fe80::/10,0000::8,0100::/8,0200::7,0400::/6,0800::/5,1000::/4,4000::/3,6000::/3,8000::/3,a000::/3,c000::/3,e000::/4,f000::/5,f800::/6,fe00::/8,fec0::/10,ff00::/8'
 
-#远程节点DNS解析优先级，可选：prefer_ipv6,prefer_ipv4
-NODE_IPV=prefer_ipv4
+#远程节点DNS解析到ip版本优先级，可选：prefer_ipv6,prefer_ipv4
+R_NODE_IPV=prefer_ipv6
 
 #启动时网络检测用的网址
 CHK_LIST='www.google.com www.youtube.com www.facebook.com www.baidu.com www.sohu.com'

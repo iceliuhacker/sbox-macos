@@ -21,6 +21,13 @@
                     "short_id": "_shortId_" // 与服务端一致
                 }
             },
+            "multiplex": {
+                "enabled": _multiplex_,
+                "protocol": "smux",
+                "max_connections": 8,
+                "min_streams": 4,
+                "padding": false
+            },
             "packet_encoding": "xudp"
         }
     ]

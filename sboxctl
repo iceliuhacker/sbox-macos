@@ -156,10 +156,16 @@ create_json()
 		JCON=0
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "reality" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
+			if [ -z "$multiplex" ]; then
+				$multiplex=false
+			fi
 			JCON=1
 		fi
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
+			if [ -z "$multiplex" ]; then
+				$multiplex=false
+			fi
 			JCON=1
 		fi
 		if [ "$JCON" != "1" ] && [ "$protocol" != "" ] && [ -f tpl/$protocol.json.tpl ]; then
@@ -201,6 +207,7 @@ create_json()
 						-e "s@_down_mbps_@${down_mbps}@g" \
 						-e "s@_congestion_control_@${congestion_control}@g" \
 						-e "s@_udp_relay_mode_@${udp_relay_mode}@g" \
+						-e "s@_multiplex_@${multiplex}@g" \
 						> run/${CONF_NUMBER}_$NODE_JSON.json
 	done
 
@@ -730,6 +737,14 @@ subscribe()
 		echo -e "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
 		if [ "$PROTOCOL" = "hysteria2" ] || [ "$PROTOCOL" = "hy2" ]; then
 			echo -e "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
+		fi
+		if [ "$PROTOCOL" = "vless" ]; then
+			echo 'Enable $NODE multiplexing:[N/y]' | awk '{printf $0}'
+			read MP
+			echo $MP | egrep -i -q '^y$|^yes$' && MP=YES
+			if [ "$MP" = "YES" ]; then
+				echo "multiplex=true" >> db/$NODE.sbox
+			fi
 		fi
 		echo "$SUB_ACT $NODE.sbox..." | awk '{printf $0}'
 		NODE_INFO=`cat db/.subscribe | grep "#${NODE}$" | sed -e 's@\(.*\)://@@' -e "s/#${NODE}$//"`

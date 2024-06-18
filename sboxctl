@@ -157,14 +157,14 @@ create_json()
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "reality" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			if [ -z "$multiplex" ]; then
-				$multiplex=false
+				multiplex=false
 			fi
 			JCON=1
 		fi
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			if [ -z "$multiplex" ]; then
-				$multiplex=false
+				multiplex=false
 			fi
 			JCON=1
 		fi

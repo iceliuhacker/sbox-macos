@@ -739,7 +739,7 @@ subscribe()
 			echo -e "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
 		fi
 		if [ "$PROTOCOL" = "vless" ]; then
-			echo 'Enable $NODE multiplexing:[N/y]' | awk '{printf $0}'
+			echo "Enable $NODE multiplexing:[N/y]" | awk '{printf $0}'
 			read MP
 			echo $MP | egrep -i -q '^y$|^yes$' && MP=YES
 			if [ "$MP" = "YES" ]; then

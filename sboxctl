@@ -776,7 +776,6 @@ subscribe()
 				-e 's/^pbk=/publicKey=/' \
 				-e 's/^sid=/shortId=/' \
 				-e 's/^address=\[/address=/' \
-				-e 's/^flow=$/flow=xtls-rprx-vision/' \
 				>> db/$NODE.sbox && echo "done." || echo "Fail!!!"
 		grep -q '^flow=$' db/$NODE.sbox && echo 'padding=true' >> db/$NODE.sbox
 	done

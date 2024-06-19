@@ -4,6 +4,8 @@ Mac OS下一键使用的sing-box脚本
 目前仅支持outbounds：
 VLESS-XTLS-uTLS-REALITY
 VLESS-XTLS-uTLS-Vision
+VLESS-H2-uTLS-REALITY
+VLESS-H2-uTLS-Vision
 hysteria2
 tuic
 socks

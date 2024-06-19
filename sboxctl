@@ -154,7 +154,7 @@ create_json()
 			network=tcp
 		fi
 		JCON=0
-		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "reality" ]; then
+		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ ! -z "$flow" ] && [ "$network" = "tcp" ] && [ "$security" = "reality" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			if [ -z "$multiplex" ]; then
 				multiplex=false
@@ -164,7 +164,7 @@ create_json()
 			fi
 			JCON=1
 		fi
-		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
+		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ ! -z "$flow" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			if [ -z "$multiplex" ]; then
 				multiplex=false
@@ -744,9 +744,9 @@ subscribe()
 			SUB_ACT="Create"
 		fi
 		PROTOCOL=`cat db/.subscribe | grep "#${NODE}$" | awk -F':' '{printf $1}'`
-		echo -e "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
+		echo "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
 		if [ "$PROTOCOL" = "hysteria2" ] || [ "$PROTOCOL" = "hy2" ]; then
-			echo -e "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
+			echo "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
 		fi
 		if [ "$PROTOCOL" = "vless" ]; then
 			echo "Enable $NODE multiplexing:[N/y]" | awk '{printf $0}'
@@ -776,8 +776,9 @@ subscribe()
 				-e 's/^pbk=/publicKey=/' \
 				-e 's/^sid=/shortId=/' \
 				-e 's/^address=\[/address=/' \
+				-e 's/^flow=$/flow=none/' \
 				>> db/$NODE.sbox && echo "done." || echo "Fail!!!"
-		grep -q '^flow=$' db/$NODE.sbox && echo 'padding=true' >> db/$NODE.sbox
+		grep -q '^flow=none$' db/$NODE.sbox && echo 'padding=true' >> db/$NODE.sbox
 	done
 }
 

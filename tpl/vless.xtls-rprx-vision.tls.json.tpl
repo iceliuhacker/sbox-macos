@@ -19,10 +19,10 @@
              },
             "multiplex": {
                 "enabled": _multiplex_,
-                "protocol": "smux",
+                "protocol": "h2mux",
                 "max_connections": 8,
                 "min_streams": 4,
-                "padding": false
+                "padding": _padding_
             },
             "packet_encoding": "xudp"
         }

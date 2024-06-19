@@ -9,3 +9,4 @@ serverName=sni
 fp=fingerprint:[chrome,firefox,edge,safari,360,qq,ios,android,random,randomized]
 allowInsecure=Skip certificate validation:[false,true]
 multiplex=Multiplex:[false,true]
+padding=padding:[false,true]

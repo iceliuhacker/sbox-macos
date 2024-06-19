@@ -159,12 +159,18 @@ create_json()
 			if [ -z "$multiplex" ]; then
 				multiplex=false
 			fi
+			if [ -z "$padding" ]; then
+				padding=false
+			fi
 			JCON=1
 		fi
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ "$flow" = "xtls-rprx-vision" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
 			TPL=tpl/$protocol.$flow.$security.json.tpl
 			if [ -z "$multiplex" ]; then
 				multiplex=false
+			fi
+			if [ -z "$padding" ]; then
+				padding=false
 			fi
 			JCON=1
 		fi
@@ -185,6 +191,9 @@ create_json()
 		fi
 		NODE_JSON=`./sing-box generate uuid`
 		echo $R_NODE_IPV | egrep -q '^prefer_ipv6$|^prefer_ipv4$' || R_NODE_IPV=prefer_ipv6
+		if [ "$padding" = "true" ]; then
+			flow=''
+		fi
 		cat $TPL | sed -e "s/_TAG_/-${XCONF}/g" \
 						-e "s/_protocol_/${protocol}/g" \
 						-e "s/_address_/${address}/g" \
@@ -208,6 +217,7 @@ create_json()
 						-e "s@_congestion_control_@${congestion_control}@g" \
 						-e "s@_udp_relay_mode_@${udp_relay_mode}@g" \
 						-e "s@_multiplex_@${multiplex}@g" \
+						-e "s@_padding_@${padding}@g" \
 						> run/${CONF_NUMBER}_$NODE_JSON.json
 	done
 
@@ -766,7 +776,9 @@ subscribe()
 				-e 's/^pbk=/publicKey=/' \
 				-e 's/^sid=/shortId=/' \
 				-e 's/^address=\[/address=/' \
+				-e 's/^flow=$/flow=xtls-rprx-vision/' \
 				>> db/$NODE.sbox && echo "done." || echo "Fail!!!"
+		grep -q '^flow=$' db/$NODE.sbox && echo 'padding=true' >> db/$NODE.sbox
 	done
 }
 

@@ -11,3 +11,4 @@ allowInsecure=Skip certificate validation:[false,true]
 publicKey=publicKey:
 shortId=shortId:
 multiplex=Multiplex:[false,true]
+padding=padding:[false,true]

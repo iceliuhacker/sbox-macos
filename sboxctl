@@ -155,7 +155,7 @@ create_json()
 		fi
 		JCON=0
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ ! -z "$flow" ] && [ "$network" = "tcp" ] && [ "$security" = "reality" ]; then
-			TPL=tpl/$protocol.$flow.$security.json.tpl
+			TPL=tpl/$protocol.$security.json.tpl
 			if [ -z "$multiplex" ]; then
 				multiplex=false
 			fi
@@ -165,7 +165,7 @@ create_json()
 			JCON=1
 		fi
 		if [ "$JCON" != "1" ] && [ "$protocol" = "vless" ] && [ ! -z "$flow" ] && [ "$network" = "tcp" ] && [ "$security" = "tls" ]; then
-			TPL=tpl/$protocol.$flow.$security.json.tpl
+			TPL=tpl/$protocol.$security.json.tpl
 			if [ -z "$multiplex" ]; then
 				multiplex=false
 			fi

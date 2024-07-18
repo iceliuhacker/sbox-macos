@@ -144,6 +144,8 @@ create_json()
 	for SBOX_DB in $RUN_CONF $BAK_CONF; do
 		ACTIVE=`echo $SBOX_DB | awk -F':' '{printf $NF}'`
 		XCONF=`echo $SBOX_DB | sed 's/:bak$//'`
+		multiplex=''
+		padding=''
 		source db/$XCONF.sbox || RUN_COUNT=`expr $RUN_COUNT - 1`
 		if [ "$RUN_COUNT" -lt "1" ]; then
 			echo "Not alive node!!!"

@@ -744,9 +744,9 @@ subscribe()
 			SUB_ACT="Create"
 		fi
 		PROTOCOL=`cat db/.subscribe | grep "#${NODE}$" | awk -F':' '{printf $1}'`
-		echo -e "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
+		printf "protocol=${PROTOCOL}\nallowInsecure=$allowInsecure" > db/$NODE.sbox || (echo "Pass $NODE:Error name!!!"; exit 1) || continue
 		if [ "$PROTOCOL" = "hysteria2" ] || [ "$PROTOCOL" = "hy2" ]; then
-			echo -e "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
+			printf "up_mbps=${HY2_UP}\ndown_mbps=${HY2_DOWN}" >> db/$NODE.sbox
 		fi
 		if [ "$PROTOCOL" = "vless" ]; then
 			echo "Enable $NODE multiplexing:[N/y]" | awk '{printf $0}'

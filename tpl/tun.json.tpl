@@ -11,7 +11,7 @@
             "auto_route": true,
             "strict_route": true,
             "route_address": [
-                _GDNS_,
+                _GDNS_
                 _GDNS6_
             ],
             "domain_strategy": "prefer_ipv6",

@@ -366,8 +366,8 @@ EOF
 		if ($3~/^([0-9]{1,3}\.){3}[0-9]{1,3}/) DNS_LIST=$3;
 		if ($3=="direct") DNS_LIST="'$DIRECT_DNS'";
 		if ($3=="UP_LINK") DNS_LIST="'$UP_LINK_DNS'";
-		INVERT="false";
-		if ($4=="invert") INVERT="true";
+		INVERT="";
+		if ($4=="invert") INVERT="\"invert\": true,";
 		LEN=split(DNS_LIST,DNS,",");
 		if ($1=="domain_suffix") {
 			gsub(/,/,"\",\"",DLIST);
@@ -389,7 +389,7 @@ EOF
 				print "                        \"rule_set\": [\"geosite-"DLIST"\"]";
 				print "                    }";
 				print "                ],";
-				print "                \"invert\": "INVERT",";
+				print "                "INVERT;
 				print "                \"server\": \""DNS[i]"\"";
 				print "            },";
 			};
@@ -458,7 +458,7 @@ EOF
 			HOST_LIST=$DPORT
 		fi
 		HOST_ACT=`echo $RT | awk -F'=' '{printf $3}'`
-		INVERT=`echo $RT | awk -F'=' '{if($4=="invert") printf "true";else printf "false"}'`
+		INVERT=`echo $RT | awk -F'=' '{if($4=="invert") printf "\"invert\": true,";else printf ""}'`
 
 		echo $HOST_TYPE | egrep -q 'geosite|geoip' && cat << EOF >> run/300_route.json
             {
@@ -469,7 +469,7 @@ EOF
                         "rule_set": ["${HOST_TYPE}-`echo $HOST_LIST | sed "s/\",\"/\",\"${HOST_TYPE}-/g"`"]
                     }
                 ],
-                "invert": ${INVERT},
+                ${INVERT}
                 "outbound": "$HOST_ACT"
             },
 EOF
@@ -477,7 +477,7 @@ EOF
 		echo $HOST_TYPE | egrep -q 'geosite|geoip' || cat << EOF >> run/300_route.json
             {
                 "$HOST_TYPE": ["$HOST_LIST"],
-                "invert": ${INVERT},
+                ${INVERT}
                 "outbound": "$HOST_ACT"
             },
 EOF
